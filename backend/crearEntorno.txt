@@ -1,2 +1,29 @@
-1. python -m venv venv
-2. source venv/bin/activate
+// Crear entorno
+1. python -m virtualenv venv(solo la primera vez)
+2. .\venv\Scripts\activate
+3. seleccionar f1 y poner el interprete venv
+4. pip install -r requirements.txt(solo una vez)
+
+//correr el server
+python manage.py runserver(desde /backend)
+
+//Crear entidad y archivos relacionados
+python manage.py startapp usuario(desde /backend)
+
+//crear migraciones y tablas db(antes borrar db y crearla de neuvo en caso de error)
+python manage.py makemigrations
+python manage.py migrate
+
+
+
+//config db
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.mysql', # El driver
+        'NAME': 'taws_project',              # El nombre de  DB
+        'USER': 'root',            # usuario de MySQL
+        'PASSWORD': 'root',     # password
+        'HOST': 'localhost',                  # O la IP de servidor de DB
+        'PORT': '3306',                       # Puerto por defecto de MySQL
+    }
+}
