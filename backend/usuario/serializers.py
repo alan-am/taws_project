@@ -1,3 +1,5 @@
+# usuario/serializers.py
+
 from rest_framework import serializers 
 from .models import Usuario
 
@@ -28,6 +30,8 @@ class UsuarioSerializer(serializers.ModelSerializer):
             'foto_carnet',   
             'contrasena',      
         ]
+
+    #todo Definir que se encripte la contra 
 
 
 
