@@ -5,14 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Web de Favores</title>
   
-  <!-- Cargar Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   
-  <!-- Cargar React y ReactDOM -->
   <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
   
-  <!-- Cargar Babel para transpilar JSX -->
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   
   <style>
@@ -21,24 +18,14 @@
       font-family: "Inter", sans-serif;
     }
 
-    /* Definiciones manuales para las animaciones de tailwindcss-animate,
-       ya que no podemos cargar el plugin en un CDN.
-    */
+    /* Definiciones manuales para las animaciones de tailwindcss-animate */
     @keyframes fadeIn {
       from { opacity: 0; }
       to { opacity: 1; }
     }
-    @keyframes fadeOut {
-      from { opacity: 1; }
-      to { opacity: 0; }
-    }
     @keyframes zoomIn95 {
       from { opacity: 0; transform: scale(0.95); }
       to { opacity: 1; transform: scale(1); }
-    }
-    @keyframes zoomOut95 {
-      from { opacity: 1; transform: scale(1); }
-      to { opacity: 0; transform: scale(0.95); }
     }
     @keyframes slideInFromLeft {
       from { opacity: 0; transform: translateX(-20px); }
@@ -61,30 +48,21 @@
 </head>
 <body>
   
-  <!-- El punto de entrada para nuestra aplicación React -->
   <div id="root"></div>
 
-  <!-- 
-    Todo nuestro código React (JavaScript) va aquí.
-    Usamos "text/babel" para que Babel lo transpile.
-  -->
   <script type="text/babel">
-    const { useState, useRef } = React;
+    const { useState, useRef, useEffect } = React;
 
     // --- Componentes de Iconos (SVG en línea) ---
-    // Reemplazamos las importaciones de 'lucide-react'
-    
+    // (Añadidos Plus, Minus, Trash)
     const IconProps = {
       className: "w-6 h-6 text-gray-700",
       strokeWidth: 2,
       fill: "none",
       stroke: "currentColor",
-      // Corregido: 'stroke-linecap' a 'strokeLinecap'
       strokeLinecap: "round",
-      // Corregido: 'stroke-linejoin' a 'strokeLinejoin'
       strokeLinejoin: "round",
     };
-
     const Menu = () => (
       <svg {...IconProps}><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
     );
@@ -103,7 +81,6 @@
     const ChevronUp = () => (
       <svg {...IconProps} className="w-5 h-5"><polyline points="18 15 12 9 6 15"></polyline></svg>
     );
-    // Añadido: Icono de Chevron Abajo para los desplegables
     const ChevronDown = () => (
       <svg {...IconProps} className="w-5 h-5 text-gray-400"><polyline points="6 9 12 15 18 9"></polyline></svg>
     );
@@ -116,9 +93,18 @@
     const UserPlus = ({ className }) => (
       <svg className={className} strokeWidth="1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><line x1="20" y1="8" x2="20" y2="14"></line><line x1="17" y1="11" x2="23" y2="11"></line></svg>
     );
+    // ***** NUEVOS ICONOS *****
+    const Plus = ({ className }) => (
+      <svg {...IconProps} className={className || "w-5 h-5"}><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+    );
+    const Minus = ({ className }) => (
+       <svg {...IconProps} className={className || "w-5 h-5"}><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+    );
+    const Trash = ({ className }) => (
+      <svg {...IconProps} className={className || "w-6 h-6 text-gray-500 hover:text-red-600"}><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+    );
 
     // --- Componente: Menú Desplegable Flotante ---
-    // Reutilizable para todas las opciones de impresión
     function DropdownMenu({ options, onSelect }) {
       return (
         <div 
@@ -138,54 +124,123 @@
         </div>
       );
     }
+    
+    // --- Componente 2: Modal de Confirmación (REUTILIZABLE) ---
+    function ConfirmacionModal({ onClose, servicio, desde, hasta, hora }) {
+      
+      // --- Lógica de Precios (Simulada) ---
+      const totalServicio = 1.50;
+      const tarifaRepartidor = 2.25;
+      const totalPagar = totalServicio + tarifaRepartidor;
+      
+      return (
+        // Fondo semitransparente
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4 animate-in fade-in">
+          {/* Contenedor del Modal */}
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-auto relative p-6 sm:p-8 space-y-4 animate-in zoom-in-95">
+            
+            {/* Botón de Cierre (Icono X) */}
+            <button
+              onClick={onClose}
+              className="absolute top-4 right-4 p-2 hover:bg-gray-100 rounded-full transition-colors"
+            >
+              <X />
+            </button>
+
+            {/* Título */}
+            <h2 className="text-2xl sm:text-3xl font-bold text-gray-800">
+              Confirmar tu Pedido
+            </h2>
+            
+            {/* Resumen del Pedido (DINÁMICO) */}
+            <div className="text-sm text-gray-600 space-y-1 pt-2">
+              <p><strong className="text-gray-900">Servicio:</strong> {servicio || "No especificado"}</p>
+              <p><strong className="text-gray-900">Desde:</strong> {desde || "No especificado"}</p>
+              <p><strong className="text-gray-900">Hasta:</strong> {hasta || "No especificado"}</p>
+              <p><strong className="text-gray-900">Hora:</strong> {hora || "No especificado"}</p>
+            </div>
+
+            {/* Sección "Monto a Pagar" (ACTUALIZADA) */}
+            <div className="space-y-2 py-4 border-t">
+              <h3 className="text-lg font-semibold text-gray-800">Monto a Pagar</h3>
+              <div className="flex justify-between text-gray-700">
+                <p>TOTAL</p>
+                <p>${totalServicio.toFixed(2)}</p>
+              </div>
+              <div className="flex justify-between text-gray-700">
+                <p>Tarifa del repartidor</p>
+                <p>${tarifaRepartidor.toFixed(2)}</p>
+              </div>
+              
+              {/* Divisor y Nuevo Total */}
+              <div className="border-t border-gray-200 pt-2 mt-2"></div>
+              <div className="flex justify-between text-xl font-bold text-black">
+                <p>Total a pagar</p>
+                <p>${totalPagar.toFixed(2)}</p>
+              </div>
+            </div>
+
+            {/* Sección "Métodos de Pagos" */}
+            <div className="space-y-3 pb-4">
+              <h3 className="text-lg font-semibold text-gray-800">Métodos de Pagos</h3>
+              <div className="bg-gray-100 border border-gray-200 rounded-lg p-3 flex items-center space-x-3">
+                <span className="text-2xl">💵</span>
+                <span className="font-medium text-gray-800">Efectivo</span>
+              </div>
+              <p className="text-xs text-gray-500">
+                Pagar al repartidor al recibir el pedido
+              </p>
+            </div>
+
+            {/* Botón de Confirmación Final */}
+            <button className="w-full bg-black text-white py-3 rounded-lg font-medium hover:bg-gray-800 transition-colors">
+              Confirmar y Publicar Pedido
+            </button>
+          </div>
+        </div>
+      );
+    }
 
     // --- Componente: Nueva Página "Impresiones Rápidas" ---
-    function FastPrintsView({ onGoBack, onNavigateToSendReceive }) {
-      // Estado para los valores del formulario
+    function FastPrintsView({ onGoBack, onNavigateToSendReceive, onNavigateToBuyTake }) {
+      // --- Estado para el Modal ---
+      const [isModalOpen, setIsModalOpen] = useState(false);
+      
+      // --- Estado para el formulario de Información ---
+      const [fecha, setFecha] = useState("");
+      const [recogida, setRecogida] = useState("");
+      const [hora, setHora] = useState("");
+      
+      // --- Lógica de Validación (simplificada para este formulario) ---
+      const isInfoValid = fecha.trim() !== "" && recogida.trim() !== "" && hora.trim() !== "";
+      
+      // (Estado y lógica del formulario de Configuración se mantienen)
       const [pages, setPages] = useState("");
       const [copies, setCopies] = useState("1");
       const [color, setColor] = useState("Color");
       const [paperSize, setPaperSize] = useState("A4");
       const [pagesPerSheet, setPagesPerSheet] = useState("1");
       const [scale, setScale] = useState("Predeterminado");
+      const [fileName, setFileName] = useState(null);
+      const fileInputRef = useRef(null);
       
-      // --- Lógica para Subir PDF ---
-      const [fileName, setFileName] = useState(null); // Estado para guardar el nombre del archivo
-      const fileInputRef = useRef(null); // Referencia al input de archivo oculto
-      
-      // 1. Esta función se llama cuando el usuario hace clic en el botón "Subir PDF"
-      const handleUploadClick = () => {
-        // Simula un clic en el input de archivo oculto
-        fileInputRef.current.click();
-      };
-      
-      // 2. Esta función se llama cuando el usuario selecciona un archivo
+      const handleUploadClick = () => fileInputRef.current.click();
       const handleFileSelect = (event) => {
         const file = event.target.files[0];
-        if (file) {
-          console.log("Archivo seleccionado:", file.name);
-          setFileName(file.name); // Guarda el nombre del archivo en el estado
-        }
+        if (file) setFileName(file.name);
       };
-      // --- Fin de la Lógica para Subir PDF ---
-
-      // Estado para controlar qué desplegable está abierto
-      const [openDropdown, setOpenDropdown] = useState(null); // 'pages', 'color', 'paperSize', 'pagesPerSheet', 'scale'
-
-      // Opciones para los desplegables
+      
+      const [openDropdown, setOpenDropdown] = useState(null);
       const pageOptions = ["Todas", "Solo páginas impares", "Solo páginas pares", "Personalizado"];
       const colorOptions = ["Color", "Blanco y Negro"];
       const paperSizeOptions = ["A4", "Carta", "102 x 152 mm (4 x 6 in)", "89 x 127 mm (3.5 x 5 in)", "Postcard 100 x 148 mm"];
       const pagesPerSheetOptions = ["1", "2", "4", "6", "9", "16"];
       const scaleOptions = ["Predeterminado", "Ajustar al área de impresión", "Ajustar al tamaño de papel", "Personalizado"];
       
-      // Función genérica para manejar la selección de un desplegable
       const handleSelect = (setter) => (value) => {
         setter(value);
-        setOpenDropdown(null); // Cerrar el desplegable después de seleccionar
+        setOpenDropdown(null);
       };
-
-      // Función para abrir/cerrar un desplegable
       const toggleDropdown = (name) => {
         setOpenDropdown(openDropdown === name ? null : name);
       };
@@ -194,34 +249,42 @@
         <div className="min-h-screen bg-gray-50 p-4 sm:p-8 animate-in fade-in duration-300">
           <div className="w-full max-w-4xl mx-auto">
             {/* Header de la nueva vista (solo flecha) */}
-            <div className="relative flex items-center pb-4">
+            <div className="flex items-center justify-between mb-6">
               <button
                 onClick={onGoBack}
-                className="absolute left-0 p-2 hover:bg-gray-100 rounded-full transition-colors"
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
               >
                 <ArrowLeft />
               </button>
+              
+              {/* Botones de Píldora */}
+              <div className="flex gap-2">
+                <button 
+                  onClick={onNavigateToSendReceive}
+                  className="px-5 py-2 bg-gray-200 text-gray-800 rounded-full font-medium text-sm hover:bg-gray-300 transition-colors"
+                >
+                  Enviar/Recoger
+                </button>
+                <button className="px-5 py-2 bg-black text-white rounded-full font-medium text-sm">
+                  Impresiones rápidas
+                </button>
+                <button 
+                  onClick={onNavigateToBuyTake}
+                  className="px-5 py-2 bg-gray-200 text-gray-800 rounded-full font-medium text-sm hover:bg-gray-300 transition-colors"
+                >
+                  Comprar/LLevar
+                </button>
+              </div>
+              <div className="w-10 h-10"></div> {/* Espaciador */}
             </div>
 
-            {/* Tabs de Servicio */}
-            <div className="flex gap-2 mb-6">
-              <button 
-                onClick={onNavigateToSendReceive}
-                className="px-6 py-3 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors"
-              >
-                Enviar/Recoger
-              </button>
-              <button className="px-6 py-3 bg-black text-white rounded-lg font-medium transition-colors">
-                Impresiones rápidas
-              </button>
-            </div>
 
             {/* Grid de 2 columnas: Formulario y Mapa */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
               {/* Columna 1: Formularios */}
               <div className="flex flex-col gap-6">
-                {/* Card 1: Información */}
+                {/* Card 1: Información (MODIFICADA) */}
                 <div className="bg-white rounded-2xl shadow-2xl p-6">
                   <h2 className="text-3xl font-bold text-gray-800 mb-6">
                     Información
@@ -233,11 +296,15 @@
                       onFocus={(e) => (e.target.type = "date")}
                       onBlur={(e) => (e.target.type = "text")}
                       className="w-full px-4 py-3 bg-gray-100 border border-gray-100 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent outline-none transition-all text-gray-700"
+                      value={fecha}
+                      onChange={(e) => setFecha(e.target.value)}
                     />
                     <input
                       type="text"
                       placeholder="Punto de Recogida"
                       className="w-full px-4 py-3 bg-gray-100 border border-gray-100 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent outline-none transition-all"
+                      value={recogida}
+                      onChange={(e) => setRecogida(e.target.value)}
                     />
                     <input
                       type="text"
@@ -245,96 +312,67 @@
                       onFocus={(e) => (e.target.type = "time")}
                       onBlur={(e) => (e.target.type = "text")}
                       className="w-full px-4 py-3 bg-gray-100 border border-gray-100 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent outline-none transition-all text-gray-700"
+                      value={hora}
+                      onChange={(e) => setHora(e.target.value)}
                     />
-                    <button className="w-full bg-gray-100 text-gray-700 py-3 rounded-lg font-medium hover:bg-gray-200 transition-colors">
+                    {/* Botón de Confirmar (MODIFICADO) */}
+                    <button 
+                      onClick={() => setIsModalOpen(true)}
+                      disabled={!isInfoValid} // Validación
+                      className={
+                        isInfoValid
+                          ? "w-full bg-black text-white py-3 rounded-lg font-medium hover:bg-gray-800 transition-colors"
+                          : "w-full bg-gray-200 text-gray-500 py-3 rounded-lg font-medium cursor-not-allowed"
+                      }
+                    >
                       Confirmar
                     </button>
                   </div>
                 </div>
 
-                {/* Card 2: Configuración */}
+                {/* Card 2: Configuración (Sin cambios en la lógica interna) */}
                 <div className="bg-white rounded-2xl shadow-2xl p-6">
                   <h3 className="text-xl font-semibold text-gray-800 mb-4">
                     Configuración
                   </h3>
                   <div className="space-y-4">
-                    {/* Input de archivo oculto */}
-                    <input
-                      type="file"
-                      ref={fileInputRef}
-                      onChange={handleFileSelect}
-                      style={{ display: "none" }}
-                      accept=".pdf" // Acepta solo archivos PDF
-                    />
-                    {/* Botón visible que activa el input oculto */}
-                    <button 
-                      onClick={handleUploadClick}
-                      className="w-full bg-gray-100 text-gray-700 py-3 rounded-lg font-medium hover:bg-gray-200 transition-colors"
-                    >
+                    <input type="file" ref={fileInputRef} onChange={handleFileSelect} style={{ display: "none" }} accept=".pdf" />
+                    <button onClick={handleUploadClick} className="w-full bg-gray-100 text-gray-700 py-3 rounded-lg font-medium hover:bg-gray-200 transition-colors">
                       {fileName || "Subir PDF"}
                     </button>
-                    
-                    {/* Desplegable Páginas */}
                     <div className="relative">
                       <label className="block text-sm font-medium text-gray-700 mb-1">Páginas</label>
-                      <button 
-                        onClick={() => toggleDropdown("pages")}
-                        className="w-full flex justify-between items-center px-4 py-3 bg-gray-100 border border-gray-100 rounded-lg text-left"
-                      >
+                      <button onClick={() => toggleDropdown("pages")} className="w-full flex justify-between items-center px-4 py-3 bg-gray-100 border border-gray-100 rounded-lg text-left">
                         <span className={pages === "Personalizado" ? "text-gray-500" : "text-gray-700"}>
                           {pages === "Personalizado" ? "Personalizado" : pages || "Todas"}
                         </span>
                         <ChevronDown />
                       </button>
-                      {openDropdown === "pages" && (
-                        <DropdownMenu options={pageOptions} onSelect={handleSelect(setPages)} />
-                      )}
+                      {openDropdown === "pages" && (<DropdownMenu options={pageOptions} onSelect={handleSelect(setPages)} />)}
                     </div>
-
-                    {/* Input para Páginas Personalizadas */}
                     {pages === "Personalizado" && (
-                       <input
-                        type="text"
-                        placeholder="p. ej: 1-5,8,11-13"
-                        className="w-full px-4 py-3 bg-gray-100 border border-gray-100 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent outline-none transition-all"
-                      />
+                       <input type="text" placeholder="p. ej: 1-5,8,11-13" className="w-full px-4 py-3 bg-gray-100 border border-gray-100 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent outline-none transition-all" />
                     )}
-
                     <div className="grid grid-cols-2 gap-4">
-                      {/* Input Copias */}
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Copias</label>
-                        <input
-                          type="number"
-                          value={copies}
-                          onChange={(e) => setCopies(e.target.value)}
-                          className="w-full px-4 py-3 bg-gray-100 border border-gray-100 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent outline-none transition-all"
-                        />
+                        <input type="number" value={copies} onChange={(e) => setCopies(e.target.value)} className="w-full px-4 py-3 bg-gray-100 border border-gray-100 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent outline-none transition-all" />
                       </div>
-                      
-                      {/* Desplegable Color */}
                       <div className="relative">
                         <label className="block text-sm font-medium text-gray-700 mb-1">Color</label>
-                        <button 
-                          onClick={() => toggleDropdown("color")}
-                          className="w-full flex justify-between items-center px-4 py-3 bg-gray-100 border border-gray-100 rounded-lg text-left"
-                        >
+                        <button onClick={() => toggleDropdown("color")} className="w-full flex justify-between items-center px-4 py-3 bg-gray-100 border border-gray-100 rounded-lg text-left">
                           <span className="text-gray-700">{color}</span>
                           <ChevronDown />
                         </button>
-                        {openDropdown === "color" && (
-                          <DropdownMenu options={colorOptions} onSelect={handleSelect(setColor)} />
-                        )}
+                        {openDropdown === "color" && (<DropdownMenu options={colorOptions} onSelect={handleSelect(setColor)} />)}
                       </div>
                     </div>
-
                   </div>
                 </div>
               </div>
 
-              {/* Columna 2: Mapa y Más Ajustes */}
+              {/* Columna 2: Mapa y Más Ajustes (Sin cambios) */}
               <div className="flex flex-col gap-6">
-                {/* Mapa */}
                 <div className="bg-white rounded-2xl shadow-2xl p-4 flex items-center justify-center min-h-[300px] md:h-full">
                   <div className="w-full h-full bg-gray-100 rounded-lg flex items-center justify-center border-2 border-dashed border-gray-300">
                     <div className="text-center text-gray-500">
@@ -343,57 +381,35 @@
                     </div>
                   </div>
                 </div>
-                
-                {/* Card 3: Más ajustes */}
                 <div className="bg-white rounded-2xl shadow-2xl p-6">
                    <h3 className="text-xl font-semibold text-gray-800 mb-4">
                     Más ajustes
                   </h3>
                   <div className="space-y-4">
-                    {/* Desplegable Tamaño de Papel */}
                     <div className="relative">
                       <label className="block text-sm font-medium text-gray-700 mb-1">Tamaño de Papel</label>
-                      <button 
-                        onClick={() => toggleDropdown("paperSize")}
-                        className="w-full flex justify-between items-center px-4 py-3 bg-gray-100 border border-gray-100 rounded-lg text-left"
-                      >
+                      <button onClick={() => toggleDropdown("paperSize")} className="w-full flex justify-between items-center px-4 py-3 bg-gray-100 border border-gray-100 rounded-lg text-left">
                         <span className="text-gray-700">{paperSize}</span>
                         <ChevronDown />
                       </button>
-                      {openDropdown === "paperSize" && (
-                        <DropdownMenu options={paperSizeOptions} onSelect={handleSelect(setPaperSize)} />
-                      )}
+                      {openDropdown === "paperSize" && (<DropdownMenu options={paperSizeOptions} onSelect={handleSelect(setPaperSize)} />)}
                     </div>
-                    
                     <div className="grid grid-cols-2 gap-4">
-                      {/* Desplegable Páginas por hoja */}
                       <div className="relative">
                         <label className="block text-sm font-medium text-gray-700 mb-1">Páginas por hoja</label>
-                        <button 
-                          onClick={() => toggleDropdown("pagesPerSheet")}
-                          className="w-full flex justify-between items-center px-4 py-3 bg-gray-100 border border-gray-100 rounded-lg text-left"
-                        >
+                        <button onClick={() => toggleDropdown("pagesPerSheet")} className="w-full flex justify-between items-center px-4 py-3 bg-gray-100 border border-gray-100 rounded-lg text-left">
                           <span className="text-gray-700">{pagesPerSheet}</span>
                           <ChevronDown />
                         </button>
-                        {openDropdown === "pagesPerSheet" && (
-                          <DropdownMenu options={pagesPerSheetOptions} onSelect={handleSelect(setPagesPerSheet)} />
-                        )}
+                        {openDropdown === "pagesPerSheet" && (<DropdownMenu options={pagesPerSheetOptions} onSelect={handleSelect(setPagesPerSheet)} />)}
                       </div>
-                      
-                      {/* Desplegable Escala */}
                       <div className="relative">
                         <label className="block text-sm font-medium text-gray-700 mb-1">Escala</label>
-                        <button 
-                          onClick={() => toggleDropdown("scale")}
-                          className="w-full flex justify-between items-center px-4 py-3 bg-gray-100 border border-gray-100 rounded-lg text-left"
-                        >
+                        <button onClick={() => toggleDropdown("scale")} className="w-full flex justify-between items-center px-4 py-3 bg-gray-100 border border-gray-100 rounded-lg text-left">
                           <span className="text-gray-700">{scale}</span>
                           <ChevronDown />
                         </button>
-                        {openDropdown === "scale" && (
-                          <DropdownMenu options={scaleOptions} onSelect={handleSelect(setScale)} />
-                        )}
+                        {openDropdown === "scale" && (<DropdownMenu options={scaleOptions} onSelect={handleSelect(setScale)} />)}
                       </div>
                     </div>
                   </div>
@@ -402,120 +418,504 @@
 
             </div> {/* Cierre del grid */}
           </div>
+          
+          {isModalOpen && <ConfirmacionModal 
+            onClose={() => setIsModalOpen(false)}
+            servicio="Impresiones rápidas"
+            desde={recogida}
+            hasta="N/A"
+            hora={hora}
+          />}
+          
         </div>
       );
     }
 
     // --- Componente: Nueva Página "Enviar/Recoger" ---
-    // ***** INICIO DE LA MODIFICACIÓN *****
-    function SendReceiveView({ onGoBack, onNavigateToFastPrints }) {
+    function SendReceiveView({ onGoBack, onNavigateToFastPrints, onNavigateToBuyTake }) {
+      
+      // --- Estado del Formulario ---
+      const [isModalOpen, setIsModalOpen] = useState(false);
+      const [fecha, setFecha] = useState("");
+      const [recogida, setRecogida] = useState("");
+      const [entrega, setEntrega] = useState("");
+      const [hora, setHora] = useState("");
+      const [descripcion, setDescripcion] = useState("");
+      const [whatsapp, setWhatsapp] = useState("");
+
+      // --- Lógica de Validación ---
+      const isFormValid = fecha.trim() !== "" && 
+                          recogida.trim() !== "" && 
+                          entrega.trim() !== "" && 
+                          hora.trim() !== "" && 
+                          descripcion.trim() !== "" && 
+                          whatsapp.trim() !== "";
+
       return (
-        <div className="min-h-screen bg-gray-50 p-4 sm:p-8 animate-in fade-in duration-300">
-          <div className="w-full max-w-4xl mx-auto">
-            {/* Header de la nueva vista (solo flecha) */}
-            <div className="relative flex items-center pb-4">
+        <div className="min-h-screen bg-white p-4 sm:p-8 animate-in fade-in duration-300">
+          <div className="w-full max-w-6xl mx-auto">
+            
+            {/* Barra de Navegación Superior (Píldoras) */}
+            <div className="flex items-center justify-between mb-6">
               <button
                 onClick={onGoBack}
-                className="absolute left-0 p-2 hover:bg-gray-100 rounded-full transition-colors"
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
               >
                 <ArrowLeft />
               </button>
+              
+              <div className="flex gap-2">
+                <button className="px-5 py-2 bg-black text-white rounded-full font-medium text-sm">
+                  Enviar/Recoger
+                </button>
+                <button 
+                  onClick={onNavigateToFastPrints}
+                  className="px-5 py-2 bg-gray-200 text-gray-800 rounded-full font-medium text-sm hover:bg-gray-300 transition-colors"
+                >
+                  Impresiones rápidas
+                </button>
+                <button 
+                  onClick={onNavigateToBuyTake}
+                  className="px-5 py-2 bg-gray-200 text-gray-800 rounded-full font-medium text-sm hover:bg-gray-300 transition-colors"
+                >
+                  Comprar/LLevar
+                </button>
+              </div>
+              
+              <div className="w-10 h-10"></div>{/* Espaciador */}
             </div>
 
-            {/* Tabs de Servicio */}
-            <div className="flex gap-2 mb-6">
-              <button className="px-6 py-3 bg-black text-white rounded-lg font-medium transition-colors">
-                Enviar/Recoger
-              </button>
-              <button 
-                onClick={onNavigateToFastPrints}
-                className="px-6 py-3 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors"
-              >
-                Impresiones rápidas
-              </button>
-            </div>
-
-            {/* Grid de 2 columnas: Formulario y Mapa */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-
-              {/* Columna 1: Formulario de Información */}
-              <div className="bg-white rounded-2xl shadow-2xl p-6">
-                <h2 className="text-3xl font-bold text-gray-800 mb-6">
+            {/* Layout de 2 columnas */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              
+              {/* Columna Izquierda (Formulario "Información") */}
+              <div className="bg-white rounded-2xl shadow-lg p-6 sm:p-8 space-y-4">
+                <h2 className="text-3xl font-bold text-gray-800 mb-4">
                   Información
                 </h2>
-                <div className="space-y-4">
-                  <input
-                    type="text"
-                    placeholder="Fecha"
-                    onFocus={(e) => (e.target.type = "date")}
-                    onBlur={(e) => (e.target.type = "text")}
-                    className="w-full px-4 py-3 bg-gray-100 border border-gray-100 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent outline-none transition-all text-gray-700"
-                  />
-                  <input
-                    type="text"
-                    placeholder="Punto de Recogida"
-                    className="w-full px-4 py-3 bg-gray-100 border border-gray-100 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent outline-none transition-all"
-                  />
-                  {/* CAMPO AÑADIDO */}
-                  <input
-                    type="text"
-                    placeholder="Punto de Entrega"
-                    className="w-full px-4 py-3 bg-gray-100 border border-gray-100 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent outline-none transition-all"
-                  />
-                  <input
-                    type="text"
-                    placeholder="Hora de Entrega Deseada"
-                    onFocus={(e) => (e.target.type = "time")}
-                    onBlur={(e) => (e.target.type = "text")}
-                    className="w-full px-4 py-3 bg-gray-100 border border-gray-100 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent outline-none transition-all text-gray-700"
-                  />
-                  <textarea
-                    placeholder="Descripción ¿Qué se transporta?"
-                    rows="4"
-                    className="w-full px-4 py-3 bg-gray-100 border border-gray-100 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent outline-none transition-all"
-                  ></textarea>
-                  {/* CAMPO AÑADIDO */}
-                  <input
-                    type="tel"
-                    placeholder="Numero de Whatsapp"
-                    className="w-full px-4 py-3 bg-gray-100 border border-gray-100 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent outline-none transition-all"
-                  />
-                  <button className="w-full bg-gray-100 text-gray-700 py-3 rounded-lg font-medium hover:bg-gray-200 transition-colors">
-                    Confirmar
-                  </button>
+                
+                <input 
+                  type="text" 
+                  placeholder="Fecha" 
+                  onFocus={(e) => (e.target.type = "date")}
+                  onBlur={(e) => (e.target.type = "text")}
+                  className="w-full px-4 py-3 bg-gray-100 rounded-lg outline-none focus:ring-2 focus:ring-black"
+                  value={fecha}
+                  onChange={(e) => setFecha(e.target.value)}
+                />
+                <input 
+                  type="text" 
+                  placeholder="Punto de Recogida" 
+                  className="w-full px-4 py-3 bg-gray-100 rounded-lg outline-none focus:ring-2 focus:ring-black"
+                  value={recogida}
+                  onChange={(e) => setRecogida(e.target.value)}
+                />
+                <input 
+                  type="text" 
+                  placeholder="Punto de Entrega" 
+                  className="w-full px-4 py-3 bg-gray-100 rounded-lg outline-none focus:ring-2 focus:ring-black"
+                  value={entrega}
+                  onChange={(e) => setEntrega(e.target.value)}
+                />
+                <input 
+                  type="text" 
+                  placeholder="Hora de Entrega Deseada" 
+                  onFocus={(e) => (e.target.type = "time")}
+                  onBlur={(e) => (e.target.type = "text")}
+                  className="w-full px-4 py-3 bg-gray-100 rounded-lg outline-none focus:ring-2 focus:ring-black"
+                  value={hora}
+                  onChange={(e) => setHora(e.target.value)}
+                />
+                <textarea 
+                  placeholder="Descripción ¿Qué se transporta?" 
+                  rows="4"
+                  className="w-full px-4 py-3 bg-gray-100 rounded-lg outline-none focus:ring-2 focus:ring-black"
+                  value={descripcion}
+                  onChange={(e) => setDescripcion(e.target.value)}
+                ></textarea>
+                <input 
+                  type="tel" 
+                  placeholder="Numero de Whatsapp" 
+                  className="w-full px-4 py-3 bg-gray-100 rounded-lg outline-none focus:ring-2 focus:ring-black"
+                  value={whatsapp}
+                  onChange={(e) => setWhatsapp(e.target.value)}
+                />
+                
+                {/* Botón de Acción (DINÁMICO) */}
+                <button 
+                  onClick={() => setIsModalOpen(true)}
+                  disabled={!isFormValid} // Deshabilitado si el formulario no es válido
+                  className={
+                    isFormValid
+                      ? "w-full bg-black text-white py-3 rounded-lg font-medium hover:bg-gray-800 transition-colors mt-2"
+                      : "w-full bg-gray-200 text-gray-500 py-3 rounded-lg font-medium cursor-not-allowed mt-2"
+                  }
+                >
+                  Confirmar
+                </button>
+              </div>
+              
+              {/* Columna Derecha (Espacio para el Mapa) */}
+              <div className="bg-white rounded-2xl shadow-lg p-4 flex items-center justify-center min-h-[400px]">
+                <div className="text-center text-gray-500">
+                  <MapPin className="w-16 h-16 text-gray-400 mx-auto" />
+                  <p className="font-medium mt-2">Espacio para el mapa</p>
                 </div>
               </div>
 
-              {/* Columna 2: Espacio para el Mapa */}
-              <div className="bg-white rounded-2xl shadow-2xl p-4 flex items-center justify-center min-h-[300px] md:h-full">
-                <div className="w-full h-full bg-gray-100 rounded-lg flex items-center justify-center border-2 border-dashed border-gray-300">
+            </div>
+          </div>
+          
+          {isModalOpen && <ConfirmacionModal 
+            onClose={() => setIsModalOpen(false)}
+            servicio="Enviar/Recoger"
+            desde={recogida}
+            hasta={entrega}
+            hora={hora}
+          />}
+          
+        </div>
+      );
+    }
+    
+    // ***** INICIO DEL NUEVO COMPONENTE *****
+    // --- Componente: Nueva Página "Comprar/LLevar" ---
+    function BuyTakeView({ onGoBack, onNavigateToSendReceive, onNavigateToFastPrints }) {
+      
+      // --- Estado del Formulario de Información ---
+      const [storeName, setStoreName] = useState("");
+      const [storeAddress, setStoreAddress] = useState("");
+      const [deliveryPoint, setDeliveryPoint] = useState("");
+
+      // --- Estado de la Lista de Compras ---
+      const [items, setItems] = useState([]); // Array de objetos: { id, description, quantity, cost }
+      const [nextId, setNextId] = useState(1); // Para IDs únicos
+      
+      // --- Estado de UI y Validación ---
+      const [isModalOpen, setIsModalOpen] = useState(false);
+      const [showTooltip, setShowTooltip] = useState(false);
+      let tooltipTimeout = useRef(null); // Ref para manejar el timeout del tooltip
+
+      // --- Lógica de la Lista de Compras ---
+      
+      const handleAddItem = () => {
+        setItems([...items, { id: nextId, description: '', quantity: 1, cost: '' }]);
+        setNextId(nextId + 1); // Incrementar el ID para el próximo item
+      };
+
+      const handleDeleteItem = (id) => {
+        setItems(items.filter(item => item.id !== id));
+      };
+
+      // Handler genérico para actualizar un campo de un item
+      const handleItemChange = (id, field, value) => {
+        setItems(currentItems =>
+          currentItems.map(item => {
+            if (item.id === id) {
+              // Manejo especial para cantidad (no menor a 1)
+              if (field === 'quantity') {
+                const newQuantity = parseInt(value) || 1;
+                return { ...item, quantity: Math.max(1, newQuantity) };
+              }
+              return { ...item, [field]: value };
+            }
+            return item;
+          })
+        );
+      };
+
+      // Handler para botones +/-
+      const handleQuantityAdjust = (id, amount) => {
+        setItems(currentItems =>
+          currentItems.map(item => {
+            if (item.id === id) {
+              const newQuantity = (parseInt(item.quantity) || 1) + amount;
+              return { ...item, quantity: Math.max(1, newQuantity) }; // No puede ser menor a 1
+            }
+            return item;
+          })
+        );
+      };
+
+      // --- Cálculos y Validación ---
+      
+      // Calcular el total a pagar sumando los costos estimados
+      const totalPagar = items.reduce((sum, item) => {
+        return sum + (parseFloat(item.cost) || 0) * (parseInt(item.quantity) || 1);
+      }, 0);
+
+      // Validación de la sección de Información
+      const isInfoValid = storeName.trim() !== "" && 
+                          storeAddress.trim() !== "" && 
+                          deliveryPoint.trim() !== "";
+                          
+      // Validación de la lista de items
+      const areItemsValid = items.length > 0 && items.every(item => 
+                            item.description.trim() !== "" &&
+                            (parseInt(item.quantity) || 0) > 0 &&
+                            (parseFloat(item.cost) || 0) > 0 // Costo estimado debe ser un número positivo
+                          );
+      
+      // Validación general del formulario
+      const isFormValid = isInfoValid && areItemsValid;
+
+      // --- Manejador del Botón Principal ---
+      
+      const handleConfirmClick = () => {
+        // Limpiar timeout anterior si existe
+        if (tooltipTimeout.current) {
+          clearTimeout(tooltipTimeout.current);
+        }
+
+        if (isFormValid) {
+          // Si todo es válido, abrimos el modal
+          console.log("Formulario válido. Abriendo modal...");
+          // (La lógica del modal de confirmación aún no se ha pedido para esta vista,
+          // pero aquí es donde iría. Por ahora, un alert.)
+          alert("¡Pedido confirmado! (Lógica del modal pendiente)");
+        } else if (isInfoValid && items.length === 0) {
+          // Si la info está bien pero faltan items, mostrar tooltip
+          setShowTooltip(true);
+          tooltipTimeout.current = setTimeout(() => setShowTooltip(false), 3000); // Ocultar después de 3 seg
+        } else {
+          // Cualquier otra validación fallida
+          console.log("Formulario inválido. Info completa:", isInfoValid, "Items válidos:", areItemsValid);
+          // Aquí se podrían mostrar otros tooltips, p.ej. "Complete la información"
+          // O si los items están incompletos
+          if (isInfoValid && items.length > 0 && !areItemsValid) {
+            alert("Por favor, complete todos los campos de los productos (descripción, cantidad y costo).");
+          } else if (!isInfoValid) {
+            alert("Por favor, complete la sección de 'Información' (tienda y entrega).");
+          }
+        }
+      };
+
+      return (
+        <div className="min-h-screen bg-white p-4 sm:p-8 animate-in fade-in duration-300">
+          <div className="w-full max-w-4xl mx-auto">
+            
+            {/* Barra de Navegación Superior (Píldoras) */}
+            <div className="flex items-center justify-between mb-6">
+              <button
+                onClick={onGoBack}
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              >
+                <ArrowLeft />
+              </button>
+              
+              <div className="flex gap-2">
+                <button 
+                  onClick={onNavigateToSendReceive}
+                  className="px-5 py-2 bg-gray-200 text-gray-800 rounded-full font-medium text-sm hover:bg-gray-300 transition-colors"
+                >
+                  Enviar/Recoger
+                </button>
+                <button 
+                  onClick={onNavigateToFastPrints}
+                  className="px-5 py-2 bg-gray-200 text-gray-800 rounded-full font-medium text-sm hover:bg-gray-300 transition-colors"
+                >
+                  Impresiones rápidas
+                </button>
+                <button className="px-5 py-2 bg-black text-white rounded-full font-medium text-sm">
+                  Comprar/LLevar
+                </button>
+              </div>
+              
+              <div className="w-10 h-10"></div>{/* Espaciador */}
+            </div>
+
+            {/* Layout de 2 columnas (solo en pantallas grandes) */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+              {/* Columna Izquierda: Información */}
+              <div className="bg-white rounded-2xl shadow-lg p-6 sm:p-8 space-y-4 h-full">
+                <h2 className="text-3xl font-bold text-gray-800 mb-4">
+                  Información
+                </h2>
+                <input 
+                  type="text" 
+                  placeholder="Nombre de la Tienda / Lugar" 
+                  className="w-full px-4 py-3 bg-gray-100 rounded-lg outline-none focus:ring-2 focus:ring-black"
+                  value={storeName}
+                  onChange={(e) => setStoreName(e.target.value)}
+                />
+                <input 
+                  type="text" 
+                  placeholder="Dirección o Referencia del Lugar" 
+                  className="w-full px-4 py-3 bg-gray-100 rounded-lg outline-none focus:ring-2 focus:ring-black"
+                  value={storeAddress}
+                  onChange={(e) => setStoreAddress(e.target.value)}
+                />
+                <input 
+                  type="text" 
+                  placeholder="Punto de Entrega" 
+                  className="w-full px-4 py-3 bg-gray-100 rounded-lg outline-none focus:ring-2 focus:ring-black"
+                  value={deliveryPoint}
+                  onChange={(e) => setDeliveryPoint(e.target.value)}
+                />
+              </div>
+              
+              {/* Columna Derecha: Mapa */}
+              <div className="bg-white rounded-2xl shadow-lg p-4 flex items-center justify-center min-h-[300px]">
+                <div className="w-full h-full bg-gray-100 rounded-lg flex items-center justify-center">
                   <div className="text-center text-gray-500">
                     <MapPin className="w-16 h-16 text-gray-400 mx-auto" />
                     <p className="font-medium mt-2">Espacio para el mapa</p>
                   </div>
                 </div>
               </div>
+            </div>
 
-            </div> {/* Cierre del grid */}
+            {/* Sección Lista de Compras (ocupa todo el ancho) */}
+            <div className="bg-white rounded-2xl shadow-lg p-6 sm:p-8 space-y-4">
+              <h2 className="text-3xl font-bold text-gray-800 mb-4">
+                Lista de Compras Detallada
+              </h2>
+              
+              {/* Encabezados de la lista (visibles solo si hay items) */}
+              {items.length > 0 && (
+                <div className="hidden md:grid grid-cols-12 gap-4 items-center mb-2 px-2">
+                  <div className="col-span-5"><label className="text-sm font-medium text-gray-600">Descripción del producto</label></div>
+                  <div className="col-span-3"><label className="text-sm font-medium text-gray-600">Cantidad a comprar</label></div>
+                  <div className="col-span-3"><label className="text-sm font-medium text-gray-600">Costo Estimado</label></div>
+                  <div className="col-span-1"></div> {/* Espacio para el basurero */}
+                </div>
+              )}
+
+              {/* Lista de Items Dinámica */}
+              <div className="space-y-4">
+                {items.map(item => (
+                  <div key={item.id} className="grid grid-cols-12 gap-4 items-center">
+                    {/* Descripción */}
+                    <div className="col-span-12 md:col-span-5">
+                      <label className="text-sm font-medium text-gray-600 md:hidden">Descripción</label>
+                      <input 
+                        type="text" 
+                        placeholder="¿Qué deseas comprar?" 
+                        className="w-full px-4 py-3 bg-gray-100 rounded-lg outline-none focus:ring-2 focus:ring-black"
+                        value={item.description}
+                        onChange={(e) => handleItemChange(item.id, 'description', e.target.value)}
+                      />
+                    </div>
+                    
+                    {/* Cantidad */}
+                    <div className="col-span-6 md:col-span-3">
+                      <label className="text-sm font-medium text-gray-600 md:hidden">Cantidad</label>
+                      <div className="flex items-center">
+                        <button 
+                          onClick={() => handleQuantityAdjust(item.id, -1)}
+                          className="p-2 bg-gray-200 rounded-l-lg hover:bg-gray-300"
+                        >
+                          <Minus className="w-5 h-5" />
+                        </button>
+                        <input 
+                          type="number" 
+                          className="w-full text-center px-2 py-3 bg-gray-100 outline-none border-t border-b border-gray-100 focus:ring-2 focus:ring-black"
+                          value={item.quantity}
+                          onChange={(e) => handleItemChange(item.id, 'quantity', e.target.value)}
+                          min="1"
+                        />
+                        <button 
+                          onClick={() => handleQuantityAdjust(item.id, 1)}
+                          className="p-2 bg-gray-200 rounded-r-lg hover:bg-gray-300"
+                        >
+                          <Plus className="w-5 h-5" />
+                        </button>
+                      </div>
+                    </div>
+                    
+                    {/* Costo Estimado */}
+                    <div className="col-span-6 md:col-span-3">
+                      
+                      {/* ***** INICIO DE LA CORRECCIÓN ***** */}
+                      <label className="text-sm font-medium text-gray-600 md:hidden">Costo Estimado</label>
+                      {/* ***** FIN DE LA CORRECCIÓN ***** */}
+                      
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+                        <input 
+                          type="number" 
+                          placeholder="0.00"
+                          className="w-full pl-7 pr-4 py-3 bg-gray-100 rounded-lg outline-none focus:ring-2 focus:ring-black"
+                          value={item.cost}
+                          onChange={(e) => handleItemChange(item.id, 'cost', e.target.value)}
+                          min="0"
+                        />
+                      </div>
+                    </div>
+                    
+                    {/* Botón de Eliminar */}
+                    <div className="col-span-12 md:col-span-1 flex justify-end items-center">
+                      <button onClick={() => handleDeleteItem(item.id)} className="p-2">
+                        <Trash />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Botón de Añadir Producto */}
+              <button 
+                onClick={handleAddItem}
+                className="flex items-center gap-2 px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50"
+              >
+                <Plus className="w-5 h-5" />
+                Añadir Producto
+              </button>
+
+              {/* Separador y Total */}
+              <div className="border-t border-gray-200 pt-4 mt-4">
+                <div className="flex justify-end items-center">
+                  <span className="text-lg font-medium text-gray-700">Total a pagar:</span>
+                  <span className="text-2xl font-bold text-black w-32 text-right">
+                    ${totalPagar.toFixed(2)}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Sección de Confirmación y Tooltip */}
+            <div className="mt-8 flex justify-end items-center relative">
+              {/* Tooltip (basado en la imagen) */}
+              {showTooltip && (
+                <div className="absolute bottom-full right-0 mb-2 px-4 py-2 bg-gray-700 text-white text-sm rounded-lg shadow-lg animate-in fade-in zoom-in-95">
+                  Por favor, añade al menos un producto a la lista
+                  <div className="absolute top-full left-1/2 -translate-x-1/2 w-0 h-0 border-x-8 border-x-transparent border-t-8 border-t-gray-700"></div>
+                </div>
+              )}
+              
+              {/* Botón de Confirmar y Pagar */}
+              <button
+                onClick={handleConfirmClick}
+                className={
+                  isFormValid
+                  ? "px-8 py-3 bg-black text-gray-300 rounded-lg font-medium hover:bg-gray-800 transition-colors"
+                  : "px-8 py-3 bg-gray-200 text-gray-500 rounded-lg font-medium cursor-not-allowed"
+                }
+              >
+                Confirmar y pagar
+              </button>
+            </div>
+            
           </div>
+          
+          {/* Aquí iría el modal de confirmación si se implementara */}
+          {/* {isModalOpen && <ConfirmacionModal ... />} */}
+          
         </div>
       );
     }
-    // ***** FIN DE LA MODIFICACIÓN *****
+    // ***** FIN DEL NUEVO COMPONENTE *****
+
 
     // --- Componente: Nueva Página "Programa tu Mandado" ---
-    function NewFavorView({ onGoBack, onNavigateToSendReceive, onNavigateToFastPrints }) {
+    function NewFavorView({ onGoBack, onNavigateToSendReceive, onNavigateToFastPrints, onNavigateToBuyTake }) {
       
-      // Clases reutilizables para inputs y botones
       const inputClass = "w-full px-4 py-3 bg-gray-100 border border-gray-100 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent outline-none transition-all text-gray-700";
       const buttonClass = "w-full bg-black text-white py-3 rounded-lg font-medium hover:bg-gray-800 transition-colors";
 
       return (
         <div className="min-h-screen bg-gray-50 p-4 sm:p-8 animate-in fade-in duration-300">
-          {/* Contenedor principal ensanchado a max-w-4xl */}
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl mx-auto">
-            
-            {/* Header modificado: Título a la izquierda */}
             <div className="flex items-center p-6 pb-4">
               <button
                 onClick={onGoBack}
@@ -527,60 +927,29 @@
                 Programa tu Mandado
               </h2>
             </div>
-
-            {/* Formulario modificado: 2 columnas */}
             <div className="px-6 pb-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                
-                {/* Columna 1 */}
                 <div className="space-y-4">
-                  <input
-                    type="text"
-                    placeholder="Fecha"
-                    onFocus={(e) => (e.target.type = "date")}
-                    onBlur={(e) => (e.target.type = "text")}
-                    className={inputClass}
-                  />
-                  <input
-                    type="text"
-                    placeholder="Punto de Recogida"
-                    className={inputClass}
-                  />
-                  <input
-                    type="text"
-                    placeholder="Hora de Entrega Deseada"
-                    onFocus={(e) => (e.target.type = "time")}
-                    onBlur={(e) => (e.target.type = "text")}
-                    className={inputClass}
-                  />
+                  <input type="text" placeholder="Fecha" onFocus={(e) => (e.target.type = "date")} onBlur={(e) => (e.target.type = "text")} className={inputClass} />
+                  <input type="text" placeholder="Punto de Recogida" className={inputClass} />
+                  <input type="text" placeholder="Hora de Entrega Deseada" onFocus={(e) => (e.target.type = "time")} onBlur={(e) => (e.target.type = "text")} className={inputClass} />
                 </div>
-                
-                {/* Columna 2: AQUÍ ESTÁN LOS CAMPOS */}
                 <div className="space-y-4">
-                  <input
-                    type="text"
-                    placeholder="Punto de Entrega"
-                    className={inputClass}
-                  />
-                  <input
-                    type="tel"
-                    placeholder="Numero de Whatsapp"
-                    className={inputClass}
-                  />
+                  <input type="text" placeholder="Punto de Entrega" className={inputClass} />
+                  <input type="tel" placeholder="Numero de Whatsapp" className={inputClass} />
                 </div>
               </div>
-
-              {/* Botón único, fuera del grid, con margen superior */}
               <button className={`${buttonClass} mt-4`}>
                 Programar Servicio
               </button>
-
-              {/* Categorías (Sin cambios) */}
+              
+              {/* --- Categorías (ACTUALIZADO) --- */}
               <div className="mt-8">
                 <h3 className="text-xl font-bold text-gray-800 mb-4">
                   Categoría de Servicios
                 </h3>
                 <div className="flex flex-col gap-4">
+                  
                   {/* Impresiones */}
                   <div 
                     onClick={onNavigateToFastPrints}
@@ -594,6 +963,7 @@
                       Sube archivos digitales y recoge el pedido listo en el punto designado.
                     </p>
                   </div>
+                  
                   {/* Enviar/Recoger */}
                   <div
                     onClick={onNavigateToSendReceive}
@@ -604,6 +974,18 @@
                       Servicio de mensajería interna rápido para trasladar objetos entre dos puntos del campus.
                     </p>
                   </div>
+                  
+                  {/* Comprar/LLevar (CONECTADO) */}
+                  <div
+                    onClick={onNavigateToBuyTake}
+                    className="bg-gray-100 p-4 rounded-lg cursor-pointer hover:bg-gray-200 transition-colors"
+                  >
+                    <h4 className="font-bold text-sm">COMPRAR/LLEVAR</h4>
+                    <p className="text-sm text-gray-600 mt-2">
+                      Pide artículos de tiendas fuera del campus y recíbelos sin salir.
+                    </p>
+                  </div>
+                  
                 </div>
               </div>
             </div>
@@ -613,164 +995,73 @@
     }
 
     // --- Componente: Página Principal ---
-    
     function HomePage() {
       const [menuOpen, setMenuOpen] = useState(false);
       const [showAuthModal, setShowAuthModal] = useState(false);
-      const [authMode, setAuthMode] = useState("signin"); // 'signin' o 'register'
+      const [authMode, setAuthMode] = useState("signin");
       const [isLoggedIn, setIsLoggedIn] = useState(false);
-      const [currentView, setCurrentView] =useState("home"); // 'home', 'newFavor', 'sendReceive', 'fastPrints', 'help'
+      const [currentView, setCurrentView] =useState("home"); // 'home', 'newFavor', 'sendReceive', 'fastPrints', 'help', 'buyTake'
 
-      // --- Datos para la página de Ayuda (FAQ) ---
       const faqData = [
-        {
-          q: "¿Cómo hago un pedido de un favor?",
-          a: "Simplemente navega por las categorías, selecciona el favor que necesitas, y completa los detalles de recogida y entrega."
-        },
-        {
-          q: "¿Cómo sé dónde está mi pedido?",
-          a: "Puedes seguir el progreso de tu favor en tiempo real desde la sección \"Historial de Pedidos\" y ver la ubicación del repartidor en el mapa."
-        },
-        {
-          q: "¿Qué métodos de pago aceptan?",
-          a: "Solo pago en efectivo."
-        },
-        {
-          q: "¿Puedo cancelar un favor?",
-          a: "Sí, puedes cancelar un favor desde la sección \"Historial de Pedidos\" siempre y cuando el repartidor aún no haya confirmado la recogida."
-        },
-        // Separador
+        { q: "¿Cómo hago un pedido de un favor?", a: "Simplemente navega por las categorías, selecciona el favor que necesitas, y completa los detalles de recogida y entrega." },
+        { q: "¿Cómo sé dónde está mi pedido?", a: "Puedes seguir el progreso de tu favor en tiempo real desde la sección \"Historial de Pedidos\" y ver la ubicación del repartidor en el mapa." },
+        { q: "¿Qué métodos de pago aceptan?", a: "Solo pago en efectivo." },
+        { q: "¿Puedo cancelar un favor?", a: "Sí, puedes cancelar un favor desde la sección \"Historial de Pedidos\" siempre y cuando el repartidor aún no haya confirmado la recogida." },
         { isSeparator: true },
-        {
-          q: "¿Cómo me registro para hacer entregas?",
-          a: "Haz clic en \"Regístrate para hacer entregas\" en la página principal, completa tus datos (carnet estudiantil) y sube tu foto de perfil."
-        },
-        {
-          q: "¿Qué necesito para ser repartidor?",
-          a: "Solo necesitas tu carnet estudiantil vigente y tiempo libre para aceptar favores."
-        },
-        {
-          q: "¿Cómo acepto un favor?",
-          a: "Cuando haya un favor disponible cerca, aparecerá una notificación. Haz clic en \"Aceptar\" y se te mostrará el mapa con las direcciones de recogida y entrega."
-        },
-        {
-          q: "¿Cuándo recibo mi pago?",
-          a: "Recibes el pago del favor en efectivo directamente del cliente al momento de completar la entrega."
-        }
+        { q: "¿Cómo me registro para hacer entregas?", a: "Haz clic en \"Regístrate para hacer entregas\" en la página principal, completa tus datos (carnet estudiantil) y sube tu foto de perfil." },
+        { q: "¿Qué necesito para ser repartidor?", a: "Solo necesitas tu carnet estudiantil vigente y tiempo libre para aceptar favores." },
+        { q: "¿Cómo acepto un favor?", a: "Cuando haya un favor disponible cerca, aparecerá una notificación. Haz clic en \"Aceptar\" y se te mostrará el mapa con las direcciones de recogida y entrega." },
+        { q: "¿Cuándo recibo mi pago?", a: "Recibes el pago del favor en efectivo directamente del cliente al momento de completar la entrega." }
       ];
 
-      // --- Renderizador para la Vista de Ayuda ---
       const renderHelpView = () => {
         return (
           <div className="min-h-screen bg-white">
-            {/* Header (reutilizado) */}
             <header className="bg-white shadow-sm sticky top-0 z-50 border-b border-gray-200">
               <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="flex items-center justify-between h-16">
-                  <button
-                    onClick={() => setMenuOpen(!menuOpen)}
-                    className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                  >
+                  <button onClick={() => setMenuOpen(!menuOpen)} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
                     <Menu />
                   </button>
                   <div className="flex items-center gap-3">
                     {isLoggedIn ? (
-                      <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                        <User />
-                      </button>
+                      <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors"><User /></button>
                     ) : (
                       <>
-                        <button
-                          onClick={() => {
-                            setAuthMode("signin");
-                            setShowAuthModal(true);
-                          }}
-                          className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
-                        >
-                          Sign in
-                        </button>
-                        <button
-                          onClick={() => {
-                            setAuthMode("register");
-                            setShowAuthModal(true);
-                          }}
-                          className="px-4 py-2 text-sm font-medium text-white bg-black hover:bg-gray-800 rounded-lg transition-colors"
-                        >
-                          Register
-                        </button>
+                        <button onClick={() => { setAuthMode("signin"); setShowAuthModal(true); }} className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">Sign in</button>
+                        <button onClick={() => { setAuthMode("register"); setShowAuthModal(true); }} className="px-4 py-2 text-sm font-medium text-white bg-black hover:bg-gray-800 rounded-lg transition-colors">Register</button>
                       </>
                     )}
                     <div className="w-px h-8 bg-gray-300 mx-2" />
-                    <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors relative">
-                      <ShoppingCart />
-                    </button>
+                    <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors relative"><ShoppingCart /></button>
                   </div>
                 </div>
               </div>
-
-              {/* Modal de Autenticación (reutilizado y CORREGIDO) */}
               {showAuthModal && (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
                   <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm animate-in zoom-in-95 duration-200">
                     <div className="flex items-center justify-between p-6 pb-4">
-                      <h2 className="text-xl font-semibold text-gray-800">
-                        {authMode === "signin" ? "Iniciar sesión" : "Registrarse"}
-                      </h2>
-                      <button
-                        onClick={() => setShowAuthModal(false)}
-                        className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-                      >
-                        <X />
-                      </button>
+                      <h2 className="text-xl font-semibold text-gray-800">{authMode === "signin" ? "Iniciar sesión" : "Registrarse"}</h2>
+                      <button onClick={() => setShowAuthModal(false)} className="p-2 hover:bg-gray-100 rounded-full transition-colors"><X /></button>
                     </div>
                     <div className="px-6 pb-6">
                       <div className="space-y-4">
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Email
-                          </label>
-                          <input
-                            type="email"
-                            placeholder="nombre@ejemplo.ej"
-                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent outline-none transition-all"
-                          />
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                          <input type="email" placeholder="nombre@ejemplo.ej" className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent outline-none transition-all" />
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Contraseña
-                          </label>
-                          <input
-                            type="password"
-                            placeholder="Ejemplo123"
-                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent outline-none transition-all"
-                          />
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Contraseña</label>
+                          <input type="password" placeholder="Ejemplo123" className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent outline-none transition-all" />
                         </div>
-                        <button
-                          onClick={() => {
-                            if (authMode === "signin") {
-                              setIsLoggedIn(true);
-                              setShowAuthModal(false);
-                            }
-                          }}
-                          className="w-full bg-black text-white py-3 rounded-lg font-medium hover:bg-gray-800 transition-colors mt-6"
-                        >
+                        <button onClick={() => { if (authMode === "signin") { setIsLoggedIn(true); setShowAuthModal(false); } }} className="w-full bg-black text-white py-3 rounded-lg font-medium hover:bg-gray-800 transition-colors mt-6">
                           {authMode === "signin" ? "Iniciar sesión" : "Registrarse"}
                         </button>
-                        {authMode === "signin" && (
-                          <div className="text-center mt-4">
-                            <button className="text-sm text-gray-600 hover:text-black transition-colors underline">
-                              ¿Contraseña olvidada?
-                            </button>
-                          </div>
-                        )}
+                        {authMode === "signin" && (<div className="text-center mt-4"><button className="text-sm text-gray-600 hover:text-black transition-colors underline">¿Contraseña olvidada?</button></div>)}
                         <div className="text-center mt-6 pt-6 border-t border-gray-200">
                           <p className="text-sm text-gray-600">
-                            {authMode === "signin" ? "¿No tienes cuenta?" : "¿Ya tienes cuenta?"}
-                            {" "}
-                            <button
-                              onClick={() => setAuthMode(authMode === "signin" ? "register" : "signin")}
-                              className="text-black font-medium hover:underline"
-                            >
+                            {authMode === "signin" ? "¿No tienes cuenta?" : "¿Ya tienes cuenta?"}{" "}
+                            <button onClick={() => setAuthMode(authMode === "signin" ? "register" : "signin")} className="text-black font-medium hover:underline">
                               {authMode === "signin" ? "Regístrate" : "Inicia sesión"}
                             </button>
                           </p>
@@ -780,62 +1071,30 @@
                   </div>
                 </div>
               )}
-              
-              {/* Menu desplegable (reutilizado y con enlaces actualizados) */}
               {menuOpen && (
                 <div className="absolute top-16 left-0 w-64 bg-white shadow-lg border-t animate-in slide-in-from-left z-50">
                   <nav className="py-2">
-                    <a 
-                      href="#" 
-                      onClick={(e) => {
-                        e.preventDefault();
-                        setCurrentView("home");
-                        setMenuOpen(false);
-                      }}
-                      className="block px-4 py-3 text-gray-700 hover:bg-gray-100 transition-colors"
-                    >
-                      Inicio
-                    </a>
+                    <a href="#" onClick={(e) => { e.preventDefault(); setCurrentView("home"); setMenuOpen(false); }} className="block px-4 py-3 text-gray-700 hover:bg-gray-100 transition-colors">Inicio</a>
                     <a href="#" className="block px-4 py-3 text-gray-700 hover:bg-gray-100 transition-colors">Mis pedidos</a>
                     <a href="#" className="block px-4 py-3 text-gray-700 hover:bg-gray-100 transition-colors">Ser repartidor</a>
-                    <a 
-                      href="#" 
-                      onClick={(e) => {
-                        e.preventDefault();
-                        setCurrentView("help");
-                        setMenuOpen(false);
-                      }}
-                      className="block px-4 py-3 text-gray-700 hover:bg-gray-100 transition-colors"
-                    >
-                      Ayuda
-                    </a>
+                    <a href="#" onClick={(e) => { e.preventDefault(); setCurrentView("help"); setMenuOpen(false); }} className="block px-4 py-3 text-gray-700 hover:bg-gray-100 transition-colors">Ayuda</a>
                   </nav>
                 </div>
               )}
             </header>
-
-            {/* Contenido de la página de Ayuda */}
             <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-16 gap-y-8">
                 {faqData.map((item, index) => {
                   if (item.isSeparator) {
-                    // Renderiza un separador que abarca ambas columnas
-                    return (
-                      <div key={index} className="md:col-span-2 border-t border-gray-200 my-4"></div>
-                    );
+                    return (<div key={index} className="md:col-span-2 border-t border-gray-200 my-4"></div>);
                   }
                   return (
-                    // Renderiza la P y R
                     <React.Fragment key={index}>
                       <div className="flex flex-col justify-center">
-                        <h3 className="text-lg font-semibold text-gray-800 py-4 border-b border-gray-200">
-                          {item.q}
-                        </h3>
+                        <h3 className="text-lg font-semibold text-gray-800 py-4 border-b border-gray-200">{item.q}</h3>
                       </div>
                       <div className="flex flex-col justify-center">
-                        <p className="text-gray-600 py-4 border-b border-gray-200">
-                          {item.a}
-                        </p>
+                        <p className="text-gray-600 py-4 border-b border-gray-200">{item.a}</p>
                       </div>
                     </React.Fragment>
                   );
@@ -846,164 +1105,87 @@
         );
       };
 
-      // Si la vista es 'newFavor', mostramos el componente de la nueva página
+      // --- Lógica de Navegación ---
       if (currentView === "newFavor") {
         return <NewFavorView 
           onGoBack={() => setCurrentView("home")} 
           onNavigateToSendReceive={() => setCurrentView("sendReceive")}
           onNavigateToFastPrints={() => setCurrentView("fastPrints")}
+          onNavigateToBuyTake={() => setCurrentView("buyTake")}
         />;
       }
-      
-      // Si la vista es 'sendReceive', mostramos la nueva vista de Enviar/Recoger
       if (currentView === "sendReceive") {
         return <SendReceiveView 
           onGoBack={() => setCurrentView("newFavor")}
           onNavigateToFastPrints={() => setCurrentView("fastPrints")}
+          onNavigateToBuyTake={() => setCurrentView("buyTake")}
         />;
       }
-      
-      // Si la vista es 'fastPrints', mostramos la nueva vista de Impresiones Rápidas
       if (currentView === "fastPrints") {
         return <FastPrintsView 
           onGoBack={() => setCurrentView("newFavor")}
           onNavigateToSendReceive={() => setCurrentView("sendReceive")}
+          onNavigateToBuyTake={() => setCurrentView("buyTake")}
         />;
       }
-      
-      // (Añadido) Si la vista es 'help', mostramos la nueva vista de Ayuda
+      // ***** NUEVO BLOQUE DE RENDER *****
+      if (currentView === "buyTake") {
+        return <BuyTakeView 
+          onGoBack={() => setCurrentView("newFavor")}
+          onNavigateToSendReceive={() => setCurrentView("sendReceive")}
+          onNavigateToFastPrints={() => setCurrentView("fastPrints")}
+        />;
+      }
       if (currentView === "help") {
         return renderHelpView();
       }
 
-      // Esta es la vista 'home' (la página principal)
+      // --- Vista "home" (Página Principal) ---
       return (
         <div className="min-h-screen bg-gray-50">
-          {/* Header */}
           <header className="bg-white shadow-sm sticky top-0 z-50">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
               <div className="flex items-center justify-between h-16">
-                {/* Menu hamburguesa */}
-                <button
-                  onClick={() => setMenuOpen(!menuOpen)}
-                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                >
-                  <Menu />
-                </button>
-
-                {/* Botones de auth y carrito */}
+                <button onClick={() => setMenuOpen(!menuOpen)} className="p-2 hover:bg-gray-100 rounded-lg transition-colors"><Menu /></button>
                 <div className="flex items-center gap-3">
                   {isLoggedIn ? (
-                    <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                      <User />
-                    </button>
+                    <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors"><User /></button>
                   ) : (
                     <>
-                      <button
-                        onClick={() => {
-                          setAuthMode("signin");
-                          setShowAuthModal(true);
-                        }}
-                        className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
-                      >
-                        Sign in
-                      </button>
-                      <button
-                        onClick={() => {
-                          setAuthMode("register");
-                          setShowAuthModal(true);
-                        }}
-                        className="px-4 py-2 text-sm font-medium text-white bg-black hover:bg-gray-800 rounded-lg transition-colors"
-                      >
-                        Register
-                      </button>
+                      <button onClick={() => { setAuthMode("signin"); setShowAuthModal(true); }} className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">Sign in</button>
+                      <button onClick={() => { setAuthMode("register"); setShowAuthModal(true); }} className="px-4 py-2 text-sm font-medium text-white bg-black hover:bg-gray-800 rounded-lg transition-colors">Register</button>
                     </>
                   )}
                   <div className="w-px h-8 bg-gray-300 mx-2" />
-                  <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors relative">
-                    <ShoppingCart />
-                  </button>
+                  <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors relative"><ShoppingCart /></button>
                 </div>
               </div>
             </div>
-
-            {/* Modal de Autenticación */}
             {showAuthModal && (
               <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
                 <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm animate-in zoom-in-95 duration-200">
-                  {/* Header del modal */}
                   <div className="flex items-center justify-between p-6 pb-4">
-                    <h2 className="text-xl font-semibold text-gray-800">
-                      {authMode === "signin" ? "Iniciar sesión" : "Registrarse"}
-                    </h2>
-                    <button
-                      onClick={() => setShowAuthModal(false)}
-                      className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-                    >
-                      <X />
-                    </button>
+                    <h2 className="text-xl font-semibold text-gray-800">{authMode === "signin" ? "Iniciar sesión" : "Registrarse"}</h2>
+                    <button onClick={() => setShowAuthModal(false)} className="p-2 hover:bg-gray-100 rounded-full transition-colors"><X /></button>
                   </div>
-
-                  {/* Formulario */}
                   <div className="px-6 pb-6">
                     <div className="space-y-4">
-                      {/* Campo Email */}
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Email
-                        </label>
-                        <input
-                          type="email"
-                          placeholder="nombre@ejemplo.ej"
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent outline-none transition-all"
-                        />
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                        <input type="email" placeholder="nombre@ejemplo.ej" className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent outline-none transition-all" />
                       </div>
-
-                      {/* Campo Contraseña */}
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Contraseña
-                        </label>
-                        <input
-                          type="password"
-                          placeholder="Ejemplo123"
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent outline-none transition-all"
-                        />
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Contraseña</label>
+                        <input type="password" placeholder="Ejemplo123" className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent outline-none transition-all" />
                       </div>
-
-                      {/* Botón de acción */}
-                      <button
-                        onClick={() => {
-                          // Simulación de inicio de sesión
-                          if (authMode === "signin") {
-                            setIsLoggedIn(true);
-                            setShowAuthModal(false);
-                          }
-                          // Aquí iría la lógica de registro real
-                        }}
-                        className="w-full bg-black text-white py-3 rounded-lg font-medium hover:bg-gray-800 transition-colors mt-6"
-                      >
+                      <button onClick={() => { if (authMode === "signin") { setIsLoggedIn(true); setShowAuthModal(false); } }} className="w-full bg-black text-white py-3 rounded-lg font-medium hover:bg-gray-800 transition-colors mt-6">
                         {authMode === "signin" ? "Iniciar sesión" : "Registrarse"}
                       </button>
-
-                      {/* Link contraseña olvidada */}
-                      {authMode === "signin" && (
-                        <div className="text-center mt-4">
-                          <button className="text-sm text-gray-600 hover:text-black transition-colors underline">
-                            ¿Contraseña olvidada?
-                          </button>
-                        </div>
-                      )}
-
-                      {/* Toggle entre sign in y register */}
+                      {authMode === "signin" && (<div className="text-center mt-4"><button className="text-sm text-gray-600 hover:text-black transition-colors underline">¿Contraseña olvidada?</button></div>)}
                       <div className="text-center mt-6 pt-6 border-t border-gray-200">
                         <p className="text-sm text-gray-600">
-                          {authMode === "signin" ? "¿No tienes cuenta?" : "¿Ya tienes cuenta?"}
-                          {" "}
-                          <button
-                            onClick={() => setAuthMode(authMode === "signin" ? "register" : "signin")}
-                            className="text-black font-medium hover:underline"
-                          >
+                          {authMode === "signin" ? "¿No tienes cuenta?" : "¿Ya tienes cuenta?"}{" "}
+                          <button onClick={() => setAuthMode(authMode === "signin" ? "register" : "signin")} className="text-black font-medium hover:underline">
                             {authMode === "signin" ? "Regístrate" : "Inicia sesión"}
                           </button>
                         </p>
@@ -1013,60 +1195,29 @@
                 </div>
               </div>
             )}
-            
-            {/* Menu desplegable (con enlaces actualizados) */}
             {menuOpen && (
               <div className="absolute top-16 left-0 w-64 bg-white shadow-lg border-t animate-in slide-in-from-left">
                 <nav className="py-2">
-                  <a 
-                    href="#" 
-                    onClick={(e) => {
-                      e.preventDefault();
-                      setCurrentView("home");
-                      setMenuOpen(false);
-                    }}
-                    className="block px-4 py-3 text-gray-700 hover:bg-gray-100 transition-colors"
-                  >
-                    Inicio
-                  </a>
+                  <a href="#" onClick={(e) => { e.preventDefault(); setCurrentView("home"); setMenuOpen(false); }} className="block px-4 py-3 text-gray-700 hover:bg-gray-100 transition-colors">Inicio</a>
                   <a href="#" className="block px-4 py-3 text-gray-700 hover:bg-gray-100 transition-colors">Mis pedidos</a>
                   <a href="#" className="block px-4 py-3 text-gray-700 hover:bg-gray-100 transition-colors">Ser repartidor</a>
-                  <a 
-                    href="#" 
-                    onClick={(e) => {
-                      e.preventDefault();
-                      setCurrentView("help");
-                      setMenuOpen(false);
-                    }}
-                    className="block px-4 py-3 text-gray-700 hover:bg-gray-100 transition-colors"
-                  >
-                    Ayuda
-                  </a>
+                  <a href="#" onClick={(e) => { e.preventDefault(); setCurrentView("help"); setMenuOpen(false); }} className="block px-4 py-3 text-gray-700 hover:bg-gray-100 transition-colors">Ayuda</a>
                 </nav>
               </div>
             )}
           </header>
-
-          {/* Main Content */}
           <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-            {/* Hero Section */}
             <div className="relative rounded-2xl overflow-hidden mb-12 h-64 sm:h-80 animate-in fade-in slide-in-from-bottom-4 duration-700" style={{ animationDelay: '100ms' }}>
-              {/* Imagen generada: Persona sonriente con sudadera amarilla */}
               <div className="absolute inset-0 bg-gradient-to-br from-amber-400 via-orange-300 to-amber-200">
                 <div className="absolute inset-0 opacity-20">
                   <div className="absolute top-10 right-20 w-32 h-32 bg-white rounded-full blur-3xl"></div>
                   <div className="absolute bottom-20 left-10 w-40 h-40 bg-orange-500 rounded-full blur-3xl"></div>
                 </div>
-                {/* Silueta de persona */}
                 <div className="absolute bottom-0 left-0 w-full h-full flex items-end justify-start pl-12">
                   <div className="relative w-48 h-64">
-                    {/* Cabeza */}
                     <div className="absolute top-8 left-12 w-16 h-16 bg-amber-900 rounded-full"></div>
-                    {/* Barba */}
                     <div className="absolute top-20 left-14 w-12 h-8 bg-amber-950 rounded-b-full"></div>
-                    {/* Cuerpo con sudadera */}
                     <div className="absolute top-24 left-4 w-32 h-40 bg-gradient-to-b from-yellow-500 to-yellow-600 rounded-t-3xl"></div>
-                    {/* Capucha */}
                     <div className="absolute top-20 left-8 w-24 h-20 bg-yellow-600 rounded-t-full"></div>
                   </div>
                 </div>
@@ -1081,26 +1232,19 @@
                 </p>
               </div>
             </div>
-
-            {/* Cards Grid */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {/* Card 1 - Ubicación */}
               <div className="bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden animate-in fade-in slide-in-from-bottom-4" style={{ animationDelay: '150ms' }}>
                 <div className="h-48 relative overflow-hidden bg-gradient-to-br from-green-50 to-emerald-100">
-                  {/* Mapa ilustrado */}
                   <div className="absolute inset-0 p-4">
-                    {/* Calles */}
                     <div className="absolute top-1/4 left-0 w-full h-1 bg-gray-300"></div>
                     <div className="absolute top-1/2 left-0 w-full h-1 bg-gray-300"></div>
                     <div className="absolute top-3/4 left-0 w-full h-1 bg-gray-300"></div>
                     <div className="absolute left-1/4 top-0 h-full w-1 bg-gray-300"></div>
                     <div className="absolute left-1/2 top-0 h-full w-1 bg-gray-300"></div>
                     <div className="absolute left-3/4 top-0 h-full w-1 bg-gray-300"></div>
-                    {/* Edificios/ubicaciones */}
                     <div className="absolute top-16 left-12 w-8 h-8 bg-blue-400 rounded"></div>
                     <div className="absolute top-24 right-16 w-6 h-10 bg-gray-400 rounded"></div>
                     <div className="absolute bottom-20 left-20 w-10 h-6 bg-green-400 rounded"></div>
-                    {/* Pins de ubicación múltiples */}
                     <div className="absolute top-12 left-32">
                       <div className="w-6 h-6 bg-red-500 rounded-full border-2 border-white shadow-lg"></div>
                       <div className="w-1 h-3 bg-red-500 mx-auto"></div>
@@ -1113,14 +1257,12 @@
                       <div className="w-6 h-6 bg-red-500 rounded-full border-2 border-white shadow-lg"></div>
                       <div className="w-1 h-3 bg-red-500 mx-auto"></div>
                     </div>
-                    {/* Pin principal animado */}
                     <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
                       <div className="relative">
                         <MapPin className="w-12 h-12 text-red-600 animate-pulse drop-shadow-lg" />
                         <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-8 h-2 bg-black/20 rounded-full blur-sm"></div>
                       </div>
                     </div>
-                    {/* Texto de ubicación */}
                     <div className="absolute top-4 left-4 bg-white px-3 py-1 rounded-full shadow-sm text-xs font-medium text-gray-700">
                       UBEP Bienestar Estudiantil
                     </div>
@@ -1135,42 +1277,29 @@
                   </button>
                 </div>
               </div>
-
-              {/* Card 2 - Pedir favor */}
               <div className="bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden animate-in fade-in slide-in-from-bottom-4" style={{ animationDelay: '300ms' }}>
                 <div className="h-48 relative overflow-hidden bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
-                  {/* Ilustración de manos ayudando */}
                   <div className="absolute inset-0 flex items-center justify-center">
-                    {/* Mano izquierda (la que recibe) */}
                     <div className="relative mr-8">
-                      {/* Palma */}
                       <div className="w-16 h-20 bg-amber-200 rounded-t-full rounded-b-lg transform -rotate-12"></div>
-                      {/* Dedos */}
                       <div className="absolute -top-3 left-2 w-3 h-8 bg-amber-200 rounded-full transform -rotate-12"></div>
                       <div className="absolute -top-4 left-5 w-3 h-10 bg-amber-200 rounded-full transform rotate-3"></div>
                       <div className="absolute -top-3 left-8 w-3 h-9 bg-amber-200 rounded-full transform rotate-12"></div>
                       <div className="absolute -top-2 left-11 w-3 h-7 bg-amber-200 rounded-full transform rotate-20"></div>
-                      {/* Muñeca */}
                       <div className="absolute -bottom-6 left-4 w-8 h-8 bg-amber-300 rounded"></div>
                     </div>
-                    {/* Mano derecha (la que da/ayuda) */}
                     <div className="relative ml-8">
-                      {/* Palma */}
                       <div className="w-16 h-20 bg-rose-200 rounded-t-full rounded-b-lg transform rotate-12"></div>
-                      {/* Dedos */}
                       <div className="absolute -top-3 right-2 w-3 h-8 bg-rose-200 rounded-full transform rotate-12"></div>
                       <div className="absolute -top-4 right-5 w-3 h-10 bg-rose-200 rounded-full transform -rotate-3"></div>
                       <div className="absolute -top-3 right-8 w-3 h-9 bg-rose-200 rounded-full transform -rotate-12"></div>
                       <div className="absolute -top-2 right-11 w-3 h-7 bg-rose-200 rounded-full transform -rotate-20"></div>
-                      {/* Muñeca */}
                       <div className="absolute -bottom-6 right-4 w-8 h-8 bg-rose-300 rounded"></div>
                     </div>
-                    {/* Efecto de ayuda/conexión */}
                     <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
                       <Hand className="w-8 h-8 text-purple-400 opacity-50 animate-pulse" />
                     </div>
                   </div>
-                  {/* Partículas decorativas */}
                   <div className="absolute top-8 left-8 w-2 h-2 bg-yellow-400 rounded-full animate-bounce"></div>
                   <div className="absolute top-12 right-12 w-2 h-2 bg-pink-400 rounded-full animate-bounce" style={{ animationDelay: '75ms' }}></div>
                   <div className="absolute bottom-12 left-16 w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
@@ -1187,8 +1316,7 @@
                   </button>
                 </div>
               </div>
-
-              {/* Card 3 - Repartidor */}
+              
               <div className="bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden animate-in fade-in slide-in-from-bottom-4" style={{ animationDelay: '500ms' }}>
                 <div className="h-48 bg-gradient-to-br from-orange-50 to-orange-100 flex items-center justify-center">
                   <UserPlus className="w-32 h-32 text-orange-500" />
@@ -1205,6 +1333,7 @@
                   </button>
                 </div>
               </div>
+              
             </div>
           </main>
         </div>
