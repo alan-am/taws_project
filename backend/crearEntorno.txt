@@ -8,7 +8,7 @@
 python manage.py runserver(desde /backend)
 
 //Crear entidad y archivos relacionados
-python manage.py startapp usuario(desde /backend)
+python manage.py startapp ------(desde /backend)
 
 //crear migraciones y tablas db(antes borrar db y crearla de neuvo en caso de error)
 python manage.py makemigrations

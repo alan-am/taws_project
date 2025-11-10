@@ -68,7 +68,7 @@ Registra un nuevo usuario en el sistema.
     }
     ```
 * **Notas del Body:**
-    * Todos los campos son **requeridos** (según tu `models.py` con `blank=False`).
+    * Todos los campos son **requeridos**
     * `rol`: Debe ser uno de los valores definidos: `'estudiante'` o `'repartidor'`.
 * **Respuesta Exitosa (201 Created):**
     * Devuelve el objeto del usuario recién creado (sin el campo `contrasena`).
