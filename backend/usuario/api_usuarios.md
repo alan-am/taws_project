@@ -2,19 +2,78 @@
 
 ## Información General
 
-**URL Base:** `/api/usuario/`
+Esta API maneja la creación, autenticación y gestión de usuarios en el sistema.
 
-**Permisos Globales:** `AllowAny` (Abierto a cualquier cliente sin autenticación).
+**Permisos por Defecto:** La mayoría de los endpoints requieren autenticación. Las peticiones a endpoints protegidos deben incluir la cabecera:
+`Authorization: Bearer <access_token>`
+
+**Excepción:** El endpoint de registro (`POST /api/usuario/crear/`) y los de autenticación (`/api/login/`) son públicos.
 
 ---
 
-## 1. Listar Usuarios
+## 🔐 Autenticación (JWT)
 
-Obtiene una lista de todos los usuarios registrados en el sistema.
+El sistema usa JSON Web Tokens (JWT) para manejar la autenticación. El token de acceso tiene una duración de **360 minutos**. despues de eso el usuario tendra que loguearse de nuevo
+
+### 1. Obtener Token (Login)
+
+Autentica a un usuario y devuelve un par de tokens (acceso y refresco).
+
+* **Método:** `POST`
+* **Endpoint:** `/api/login/`
+* **Permisos:** `AllowAny`
+* **Cuerpo de Petición (Request Body):**
+    ```json
+    {
+      "username": "alan_p",
+      "password": "unPasswordSeguro123"
+    }
+    ```
+* **Respuesta Exitosa (200 OK):**
+    ```json
+    {
+      "refresh": "eyJhbGciOi... (token largo) ...",
+      "access": "eyJ0eXAiOi... (token corto - usar este) ..."
+    }
+    ```
+* **Respuesta de Error (401 Unauthorized):**
+    ```json
+    {
+      "detail": "No active account found with the given credentials"
+    }
+    ```
+
+### 2. Refrescar Token(Ignorar por ahora)
+
+Obtiene un nuevo token de acceso usando un token de refresco válido.
+
+* **Método:** `POST`
+* **Endpoint:** `/api/login/refresh/`
+* **Permisos:** `AllowAny`
+* **Cuerpo de Petición (Request Body):**
+    ```json
+    {
+      "refresh": "eyJhbGciOi... (el token de refresco) ..."
+    }
+    ```
+* **Respuesta Exitosa (200 OK):**
+    ```json
+    {
+      "access": "eyJ0eXAiOi... (un nuevo token de acceso) ..."
+    }
+    ```
+
+---
+
+## 👤 Endpoints de Gestión de Usuarios
+
+### 1. Listar Usuarios
+
+Obtiene una lista de todos los usuarios registrados, todos requieren del token corto(access) incluido en el header.
 
 * **Método:** `GET`
-* **Endpoint:** `/api/usuario/`
-* **Permisos:** `AllowAny`
+* **Endpoint:** `/api/usuario/listar/`
+* **Permisos:** `IsAuthenticated` (Requiere token)
 * **Respuesta Exitosa (200 OK):**
     ```json
     [
@@ -28,31 +87,19 @@ Obtiene una lista de todos los usuarios registrados en el sistema.
         "rol": "estudiante",
         "foto_perfil": "[http://example.com/perfil.jpg](http://example.com/perfil.jpg)",
         "foto_carnet": "[http://example.com/carnet.jpg](http://example.com/carnet.jpg)"
-      },
-      {
-        "id": 2,
-        "nombre_usuario": "carla_r",
-        "correo": "carla@correo.com",
-        "nombre": "Carla",
-        "apellido": "Reyes",
-        "telefono": "0987654321",
-        "rol": "repartidor",
-        "foto_perfil": "[http://example.com/perfil2.jpg](http://example.com/perfil2.jpg)",
-        "foto_carnet": "[http://example.com/carnet2.jpg](http://example.com/carnet2.jpg)"
       }
     ]
     ```
 
 ---
 
-## 2. Crear un Usuario (Registro)
+### 2. Crear un Usuario (Registro)
 
 Registra un nuevo usuario en el sistema.
 
-
 * **Método:** `POST`
-* **Endpoint:** `/api/usuario/`
-* **Permisos:** `AllowAny`
+* **Endpoint:** `/api/usuario/crear/`
+* **Permisos:** `AllowAny` (Público)
 * **Cuerpo de Petición (Request Body):**
     ```json
     {
@@ -68,7 +115,7 @@ Registra un nuevo usuario en el sistema.
     }
     ```
 * **Notas del Body:**
-    * Todos los campos son **requeridos**
+    * Todos los campos son **requeridos**.
     * `rol`: Debe ser uno de los valores definidos: `'estudiante'` o `'repartidor'`.
 * **Respuesta Exitosa (201 Created):**
     * Devuelve el objeto del usuario recién creado (sin el campo `contrasena`).
@@ -88,14 +135,14 @@ Registra un nuevo usuario en el sistema.
 
 ---
 
-## 3. Obtener un Usuario Específico
+### 3. Obtener un Usuario Específico
 
 Obtiene los detalles de un solo usuario usando su `id`.
 
 * **Método:** `GET`
-* **Endpoint:** `/api/usuario/<id>/`
-* **Ejemplo:** `/api/usuario/1/`
-* **Permisos:** `AllowAny`
+* **Endpoint:** `/api/usuario/detalle/<id>/`
+* **Ejemplo:** `/api/usuario/detalle/1/`
+* **Permisos:** `IsAuthenticated` (Requiere token)
 * **Respuesta Exitosa (200 OK):**
     ```json
     {
@@ -119,40 +166,15 @@ Obtiene los detalles de un solo usuario usando su `id`.
 
 ---
 
-## 4. Actualizar Usuario (Completo)
+### 4. Actualizar Usuario (Completo o Parcial)
 
-Actualiza *todos* los campos de un usuario existente. Si omites un campo, se establecerá como nulo o por defecto (lo cual puede dar error si es requerido).
+Actualiza los campos de un usuario existente.
 
-* **Método:** `PUT`
-* **Endpoint:** `/api/usuario/<id>/`
-* **Permisos:** `AllowAny`
-* **Cuerpo de Petición (Request Body):**
-    * Debe incluir *todos* los campos del serializer (excepto `contrasena` si no se desea cambiar).
-    ```json
-    {
-      "nombre_usuario": "alan_actualizado",
-      "correo": "alan_nuevo@correo.com",
-      "nombre": "Alan",
-      "apellido": "Perez G.",
-      "telefono": "0991111111",
-      "rol": "repartidor",
-      "foto_perfil": "[http://example.com/perfil_nuevo.jpg](http://example.com/perfil_nuevo.jpg)",
-      "foto_carnet": "[http://example.com/carnet_nuevo.jpg](http://example.com/carnet_nuevo.jpg)"
-    }
-    ```
-* **Respuesta Exitosa (200 OK):**
-    * Devuelve el objeto del usuario actualizado.
-
----
-
-## 5. Actualizar Usuario (Parcial)
-
-Actualiza *solo* los campos proporcionados de un usuario existente.
-
-* **Método:** `PATCH`
-* **Endpoint:** `/api/usuario/<id>/`
-* **Permisos:** `AllowAny`
-* **Cuerpo de Petición (Request Body):**
+* **Método:** `PUT` (para actualizar todo) o `PATCH` (para actualizar parcialmente)
+* **Endpoint:** `/api/usuario/actualizar/<id>/`
+* **Ejemplo:** `/api/usuario/actualizar/1/`
+* **Permisos:** `IsAuthenticated` (Requiere token)
+* **Cuerpo de Petición (Request Body - `PATCH`):**
     * Incluye solo los campos que deseas cambiar.
     ```json
     {
@@ -165,12 +187,13 @@ Actualiza *solo* los campos proporcionados de un usuario existente.
 
 ---
 
-## 6. Eliminar un Usuario
+### 5. Eliminar un Usuario
 
 Elimina un usuario del sistema de forma permanente.
 
 * **Método:** `DELETE`
-* **Endpoint:** `/api/usuario/<id>/`
-* **Permisos:** `AllowAny`
+* **Endpoint:** `/api/usuario/eliminar/<id>/`
+* **Ejemplo:** `/api/usuario/eliminar/1/`
+* **Permisos:** `IsAuthenticated` (Requiere token)
 * **Respuesta Exitosa (204 No Content):**
     * No se devuelve ningún contenido en el cuerpo de la respuesta.

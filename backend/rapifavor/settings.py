@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 #rapifavor/setting.py
 from pathlib import Path
+from datetime import timedelta
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -138,4 +139,13 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     )
+}
+
+#Config jwt
+SIMPLE_JWT = {
+    #duración del token de acceso
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=360), 
+    
+    # También puedes cambiar el de refresco (por defecto 1 día)
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
 }
