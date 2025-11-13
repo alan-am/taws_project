@@ -613,7 +613,7 @@
           currentItems.map(item => {
             if (item.id === id) {
               // Manejo especial para cantidad (no menor a 1)
-              if (field === 'quantity') {
+              if (field === "quantity") {
                 const newQuantity = parseInt(value) || 1;
                 return { ...item, quantity: Math.max(1, newQuantity) };
               }
@@ -793,7 +793,7 @@
                         placeholder="¿Qué deseas comprar?" 
                         className="w-full px-4 py-3 bg-gray-100 rounded-lg outline-none focus:ring-2 focus:ring-black"
                         value={item.description}
-                        onChange={(e) => handleItemChange(item.id, 'description', e.target.value)}
+                        onChange={(e) => handleItemChange(item.id, "description", e.target.value)}
                       />
                     </div>
                     
@@ -811,7 +811,7 @@
                           type="number" 
                           className="w-full text-center px-2 py-3 bg-gray-100 outline-none border-t border-b border-gray-100 focus:ring-2 focus:ring-black"
                           value={item.quantity}
-                          onChange={(e) => handleItemChange(item.id, 'quantity', e.target.value)}
+                          onChange={(e) => handleItemChange(item.id, "quantity", e.target.value)}
                           min="1"
                         />
                         <button 
@@ -837,7 +837,7 @@
                           placeholder="0.00"
                           className="w-full pl-7 pr-4 py-3 bg-gray-100 rounded-lg outline-none focus:ring-2 focus:ring-black"
                           value={item.cost}
-                          onChange={(e) => handleItemChange(item.id, 'cost', e.target.value)}
+                          onChange={(e) => handleItemChange(item.id, "cost", e.target.value)}
                           min="0"
                         />
                       </div>
@@ -1002,6 +1002,57 @@
       const [isLoggedIn, setIsLoggedIn] = useState(false);
       const [currentView, setCurrentView] =useState("home"); // 'home', 'newFavor', 'sendReceive', 'fastPrints', 'help', 'buyTake'
 
+      // --- INICIO DE LA INTEGRACIÓN DE LOGIN ---
+      const [username, setUsername] = useState("");
+      const [password, setPassword] = useState("");
+      const [error, setError] = useState(null);
+      const [isLoading, setIsLoading] = useState(false);
+
+      const handleLogin = async () => {
+        setIsLoading(true);
+        setError(null);
+        
+        // URL del backend (asegúrate que tu backend corra en este puerto)
+        const apiUrl = "http://127.0.0.1:8000/api/login/";
+
+        try {
+          const response = await fetch(apiUrl, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ username, password }),
+          });
+
+          const data = await response.json();
+
+          if (response.ok) {
+            // ¡Éxito!
+            console.log("Token de Acceso:", data.access);
+            console.log("Token de Refresco:", data.refresh);
+            
+            // Aquí guardaríamos el token (ej. localStorage o state global)
+            // localStorage.setItem("accessToken", data.access); 
+
+            setIsLoggedIn(true);
+            setShowAuthModal(false);
+            setUsername("");
+            setPassword("");
+          } else {
+            // Error desde la API (ej. 401 Unauthorized)
+            setError(data.detail || "Error al iniciar sesión");
+          }
+        } catch (err) {
+          // Error de red (ej. el backend no está corriendo)
+          console.error("Error de red:", err);
+          setError("No se pudo conectar al servidor. ¿El backend está corriendo?");
+        } finally {
+          setIsLoading(false);
+        }
+      };
+      // --- FIN DE LA INTEGRACIÓN DE LOGIN ---
+
+
       const faqData = [
         { q: "¿Cómo hago un pedido de un favor?", a: "Simplemente navega por las categorías, selecciona el favor que necesitas, y completa los detalles de recogida y entrega." },
         { q: "¿Cómo sé dónde está mi pedido?", a: "Puedes seguir el progreso de tu favor en tiempo real desde la sección \"Historial de Pedidos\" y ver la ubicación del repartidor en el mapa." },
@@ -1028,8 +1079,8 @@
                       <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors"><User /></button>
                     ) : (
                       <>
-                        <button onClick={() => { setAuthMode("signin"); setShowAuthModal(true); }} className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">Sign in</button>
-                        <button onClick={() => { setAuthMode("register"); setShowAuthModal(true); }} className="px-4 py-2 text-sm font-medium text-white bg-black hover:bg-gray-800 rounded-lg transition-colors">Register</button>
+                        <button onClick={() => { setAuthMode("signin"); setShowAuthModal(true); setError(null); }} className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">Sign in</button>
+                        <button onClick={() => { setAuthMode("register"); setShowAuthModal(true); setError(null); }} className="px-4 py-2 text-sm font-medium text-white bg-black hover:bg-gray-800 rounded-lg transition-colors">Register</button>
                       </>
                     )}
                     <div className="w-px h-8 bg-gray-300 mx-2" />
@@ -1046,22 +1097,50 @@
                     </div>
                     <div className="px-6 pb-6">
                       <div className="space-y-4">
+                        
+                        {/* --- INICIO CAMBIOS MODAL --- */}
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
-                          <input type="email" placeholder="nombre@ejemplo.ej" className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent outline-none transition-all" />
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            {authMode === "signin" ? "Nombre de usuario" : "Email"}
+                          </label>
+                          <input 
+                            type={authMode === "signin" ? "text" : "email"} 
+                            placeholder={authMode === "signin" ? "tu_usuario" : "nombre@ejemplo.ej"} 
+                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent outline-none transition-all"
+                            value={authMode === "signin" ? username : ""}
+                            onChange={(e) => authMode === "signin" && setUsername(e.target.value)}
+                          />
                         </div>
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">Contraseña</label>
-                          <input type="password" placeholder="Ejemplo123" className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent outline-none transition-all" />
+                          <input 
+                            type="password" 
+                            placeholder="Ejemplo123" 
+                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent outline-none transition-all"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                          />
                         </div>
-                        <button onClick={() => { if (authMode === "signin") { setIsLoggedIn(true); setShowAuthModal(false); } }} className="w-full bg-black text-white py-3 rounded-lg font-medium hover:bg-gray-800 transition-colors mt-6">
-                          {authMode === "signin" ? "Iniciar sesión" : "Registrarse"}
+                        
+                        {/* Mensaje de Error */}
+                        {error && (
+                          <p className="text-sm text-red-600 text-center">{error}</p>
+                        )}
+
+                        <button 
+                          onClick={authMode === "signin" ? handleLogin : () => { /* Lógica de registro aquí */ }} 
+                          disabled={isLoading}
+                          className="w-full bg-black text-white py-3 rounded-lg font-medium hover:bg-gray-800 transition-colors mt-6 disabled:bg-gray-400"
+                        >
+                          {isLoading ? "Cargando..." : (authMode === "signin" ? "Iniciar sesión" : "Registrarse")}
                         </button>
+                        {/* --- FIN CAMBIOS MODAL --- */}
+
                         {authMode === "signin" && (<div className="text-center mt-4"><button className="text-sm text-gray-600 hover:text-black transition-colors underline">¿Contraseña olvidada?</button></div>)}
                         <div className="text-center mt-6 pt-6 border-t border-gray-200">
                           <p className="text-sm text-gray-600">
                             {authMode === "signin" ? "¿No tienes cuenta?" : "¿Ya tienes cuenta?"}{" "}
-                            <button onClick={() => setAuthMode(authMode === "signin" ? "register" : "signin")} className="text-black font-medium hover:underline">
+                            <button onClick={() => { setAuthMode(authMode === "signin" ? "register" : "signin"); setError(null); }} className="text-black font-medium hover:underline">
                               {authMode === "signin" ? "Regístrate" : "Inicia sesión"}
                             </button>
                           </p>
@@ -1152,8 +1231,8 @@
                     <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors"><User /></button>
                   ) : (
                     <>
-                      <button onClick={() => { setAuthMode("signin"); setShowAuthModal(true); }} className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">Sign in</button>
-                      <button onClick={() => { setAuthMode("register"); setShowAuthModal(true); }} className="px-4 py-2 text-sm font-medium text-white bg-black hover:bg-gray-800 rounded-lg transition-colors">Register</button>
+                      <button onClick={() => { setAuthMode("signin"); setShowAuthModal(true); setError(null); }} className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">Sign in</button>
+                      <button onClick={() => { setAuthMode("register"); setShowAuthModal(true); setError(null); }} className="px-4 py-2 text-sm font-medium text-white bg-black hover:bg-gray-800 rounded-lg transition-colors">Register</button>
                     </>
                   )}
                   <div className="w-px h-8 bg-gray-300 mx-2" />
@@ -1169,28 +1248,56 @@
                     <button onClick={() => setShowAuthModal(false)} className="p-2 hover:bg-gray-100 rounded-full transition-colors"><X /></button>
                   </div>
                   <div className="px-6 pb-6">
-                    <div className="space-y-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
-                        <input type="email" placeholder="nombre@ejemplo.ej" className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent outline-none transition-all" />
+                      <div className="space-y-4">
+                        
+                        {/* --- INICIO CAMBIOS MODAL --- */}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            {authMode === "signin" ? "Nombre de usuario" : "Email"}
+                          </label>
+                          <input 
+                            type={authMode === "signin" ? "text" : "email"} 
+                            placeholder={authMode === "signin" ? "tu_usuario" : "nombre@ejemplo.ej"} 
+                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent outline-none transition-all"
+                            value={authMode === "signin" ? username : ""}
+                            onChange={(e) => authMode === "signin" && setUsername(e.target.value)}
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Contraseña</label>
+                          <input 
+                            type="password" 
+                            placeholder="Ejemplo123" 
+                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent outline-none transition-all"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                          />
+                        </div>
+                        
+                        {/* Mensaje de Error */}
+                        {error && (
+                          <p className="text-sm text-red-600 text-center">{error}</p>
+                        )}
+
+                        <button 
+                          onClick={authMode === "signin" ? handleLogin : () => { /* Lógica de registro aquí */ }} 
+                          disabled={isLoading}
+                          className="w-full bg-black text-white py-3 rounded-lg font-medium hover:bg-gray-800 transition-colors mt-6 disabled:bg-gray-400"
+                        >
+                          {isLoading ? "Cargando..." : (authMode === "signin" ? "Iniciar sesión" : "Registrarse")}
+                        </button>
+                        {/* --- FIN CAMBIOS MODAL --- */}
+
+                        {authMode === "signin" && (<div className="text-center mt-4"><button className="text-sm text-gray-600 hover:text-black transition-colors underline">¿Contraseña olvidada?</button></div>)}
+                        <div className="text-center mt-6 pt-6 border-t border-gray-200">
+                          <p className="text-sm text-gray-600">
+                            {authMode === "signin" ? "¿No tienes cuenta?" : "¿Ya tienes cuenta?"}{" "}
+                            <button onClick={() => { setAuthMode(authMode === "signin" ? "register" : "signin"); setError(null); }} className="text-black font-medium hover:underline">
+                              {authMode === "signin" ? "Regístrate" : "Inicia sesión"}
+                            </button>
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Contraseña</label>
-                        <input type="password" placeholder="Ejemplo123" className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent outline-none transition-all" />
-                      </div>
-                      <button onClick={() => { if (authMode === "signin") { setIsLoggedIn(true); setShowAuthModal(false); } }} className="w-full bg-black text-white py-3 rounded-lg font-medium hover:bg-gray-800 transition-colors mt-6">
-                        {authMode === "signin" ? "Iniciar sesión" : "Registrarse"}
-                      </button>
-                      {authMode === "signin" && (<div className="text-center mt-4"><button className="text-sm text-gray-600 hover:text-black transition-colors underline">¿Contraseña olvidada?</button></div>)}
-                      <div className="text-center mt-6 pt-6 border-t border-gray-200">
-                        <p className="text-sm text-gray-600">
-                          {authMode === "signin" ? "¿No tienes cuenta?" : "¿Ya tienes cuenta?"}{" "}
-                          <button onClick={() => setAuthMode(authMode === "signin" ? "register" : "signin")} className="text-black font-medium hover:underline">
-                            {authMode === "signin" ? "Regístrate" : "Inicia sesión"}
-                          </button>
-                        </p>
-                      </div>
-                    </div>
                   </div>
                 </div>
               </div>
