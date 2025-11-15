@@ -13,7 +13,7 @@ Esta API maneja la creación, autenticación y gestión de usuarios en el sistem
 
 ## 🔐 Autenticación (JWT)
 
-El sistema usa JSON Web Tokens (JWT) para manejar la autenticación. El token de acceso tiene una duración de **360 minutos**. despues de eso el usuario tendra que loguearse de nuevo
+El sistema usa JSON Web Tokens (JWT) para manejar la autenticación. El token de acceso tiene una duración de **360 minutos** (6 horas). Después de eso, el usuario tendrá que loguearse de nuevo.
 
 ### 1. Obtener Token (Login)
 
@@ -25,7 +25,7 @@ Autentica a un usuario y devuelve un par de tokens (acceso y refresco).
 * **Cuerpo de Petición (Request Body):**
     ```json
     {
-      "username": "alan_p",
+      "email": "alan@correo.com",
       "password": "unPasswordSeguro123"
     }
     ```
@@ -43,7 +43,7 @@ Autentica a un usuario y devuelve un par de tokens (acceso y refresco).
     }
     ```
 
-### 2. Refrescar Token(Ignorar por ahora)
+### 2. Refrescar Token (Ignorar por ahora)
 
 Obtiene un nuevo token de acceso usando un token de refresco válido.
 
@@ -69,7 +69,7 @@ Obtiene un nuevo token de acceso usando un token de refresco válido.
 
 ### 1. Listar Usuarios
 
-Obtiene una lista de todos los usuarios registrados, todos requieren del token corto(access) incluido en el header.
+Obtiene una lista de todos los usuarios registrados. Todos requieren del token corto (access) incluido en el header.
 
 * **Método:** `GET`
 * **Endpoint:** `/api/usuario/listar/`
@@ -100,7 +100,17 @@ Registra un nuevo usuario en el sistema.
 * **Método:** `POST`
 * **Endpoint:** `/api/usuario/crear/`
 * **Permisos:** `AllowAny` (Público)
-* **Cuerpo de Petición (Request Body):**
+* **Cuerpo de Petición Mínimo (Request Body):**
+    ```json
+    {
+      "correo": "nuevo@correo.com",
+      "nombre": "Nombre",
+      "apellido": "Apellido",
+      "contrasena": "unPasswordSeguro123",
+      "rol": "estudiante"
+    }
+    ```
+* **Cuerpo de Petición Completo (Opcional):**
     ```json
     {
       "nombre_usuario": "nuevo_usuario",
@@ -115,7 +125,8 @@ Registra un nuevo usuario en el sistema.
     }
     ```
 * **Notas del Body:**
-    * Todos los campos son **requeridos**.
+    * **Campos Requeridos:** `correo`, `nombre`, `apellido`, `contrasena`, `rol`.
+    * **Campos Opcionales:** `nombre_usuario`, `telefono`, `foto_perfil`, `foto_carnet`.
     * `rol`: Debe ser uno de los valores definidos: `'estudiante'` o `'repartidor'`.
 * **Respuesta Exitosa (201 Created):**
     * Devuelve el objeto del usuario recién creado (sin el campo `contrasena`).
