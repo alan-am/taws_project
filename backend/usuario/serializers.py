@@ -5,10 +5,13 @@ from .models import Usuario
 
 class UsuarioSerializer(serializers.ModelSerializer):
     # traduccion de campos
-    nombre_usuario = serializers.CharField(source='username')
+    nombre_usuario = serializers.CharField(source='username', required=False, allow_blank=True) #lo sobreescribimos como opcional
+
+
+    #
     correo = serializers.EmailField(source='email')
-    nombre = serializers.CharField(source='first_name')
-    apellido = serializers.CharField(source='last_name')
+    nombre = serializers.CharField(source='first_name', required=True)
+    apellido = serializers.CharField(source='last_name', required=True)
     contrasena = serializers.CharField(
         source='password',  
         write_only=True,    #write_only por seguridad
