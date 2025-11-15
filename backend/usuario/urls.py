@@ -9,6 +9,11 @@ router = routers.DefaultRouter()
 router.register('api/usuario', UsuarioViewSet, "usuario") #crear el crud
 
 urlpatterns = [
+    path(
+        'api/usuario/me/', 
+        UsuarioViewSet.as_view({'get': 'me'}), 
+        name='usuario-me'
+    ),
     # Listar (GET)
     path(
         'api/usuario/listar/', 

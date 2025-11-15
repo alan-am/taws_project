@@ -50,15 +50,18 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'corsheaders',
     'usuario',
     'rest_framework',
     'rest_framework_simplejwt',
     'pedidos', #nueva app agregada
+
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -165,3 +168,6 @@ SIMPLE_JWT = {
     # También puedes cambiar el de refresco (por defecto 1 día)
     "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
 }
+
+# Config del cors, por el momento abierto para todos
+CORS_ALLOW_ALL_ORIGINS = True

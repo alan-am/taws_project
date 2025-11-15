@@ -67,6 +67,37 @@ Obtiene un nuevo token de acceso usando un token de refresco válido.
 
 ## 👤 Endpoints de Gestión de Usuarios
 
+### 3. Obtener Perfil de Usuario (mediante token access obtenido)
+
+Obtiene los detalles completos del usuario que está actualmente autenticado (basado en el token de acceso).
+
+* **Método:** `GET`
+* **Endpoint:** `/api/usuario/me/`
+* **Permisos:** `IsAuthenticated` (Requiere token en el header de la peticion)
+* **Respuesta Exitosa (200 OK):**
+    ```json
+    {
+      "id": 1,
+      "nombre_usuario": "alan_p",
+      "correo": "alan@correo.com",
+      "nombre": "Alan",
+      "apellido": "Perez",
+      "telefono": "0991234567",
+      "rol": "estudiante",
+      "foto_perfil": "[http://example.com/perfil.jpg](http://example.com/perfil.jpg)",
+      "foto_carnet": "[http://example.com/carnet.jpg](http://example.com/carnet.jpg)"
+    }
+    ```
+* **Respuesta de Error (401 Unauthorized):**
+    ```json
+    {
+      "detail": "Authentication credentials were not provided."
+    }
+    ```
+
+---
+
+
 ### 1. Listar Usuarios
 
 Obtiene una lista de todos los usuarios registrados. Todos requieren del token corto (access) incluido en el header.
