@@ -27,3 +27,11 @@ DATABASES = {
         'PORT': '3306',                       # Puerto por defecto de MySQL
     }
 }
+
+
+//eliminar db
+-- DROP database taws_project
+//volver a crear db
+-- CREATE DATABASE taws_project
+//dejar en uso la db
+-- use taws_project

@@ -20,17 +20,15 @@ class PedidoSerializer(serializers.ModelSerializer):
             'num_whats',
             'descripcion',
             'punto_origen_id',
-            'punto_desitno_id',
+            'punto_destino_id',
             'estado',
             'fechaInicial',
             'horaDeseada',
             'fechaFinal',
             'costoEnvio',
+            'archivo_pdf',
+            'formato_color',
         ]
-        #extra_kwargs = {
-         #   'fechaFinal': {'required': False, 'allow_null': True},
-         #   'idRepartidor': {'required': False, 'allow_null': True},
-        #}
 
     def create(self, validated_data):
         

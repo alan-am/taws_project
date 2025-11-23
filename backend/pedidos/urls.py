@@ -1,11 +1,16 @@
+# pedidos/urls.py
 from django.urls import path
 from rest_framework import routers
 from .api import PedidoViewSet
 
-router = routers.DefaultRouter()
-router.register('api/pedido', PedidoViewSet, "pedido")  # CRUD automático
 
 urlpatterns = [
+    #Lista los pedidos que aun no han sido aceptados
+    path(
+        'api/pedido/publicados/',
+        PedidoViewSet.as_view({'get': 'publicados'}),
+        name='pedido-publicados'
+    ),
     # Listar
     path(
         'api/pedido/listar/',

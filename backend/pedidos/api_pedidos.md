@@ -10,11 +10,44 @@ Debes enviar el token en el header:
 
 `Authorization: Bearer <access_token>`
 
+
+---
+## 1. 📢 Listar Pedidos Publicados (Muro de Pedidos)
+
+Obtiene una lista filtrada mostrando únicamente los pedidos con estado **"Publicado"**, ordenados desde el más reciente. Esta es la lista principal que visualizan los repartidores para buscar encargos disponibles.
+
+* **Método:** `GET`
+* **Endpoint:** `/api/pedido/publicados/`
+* **Permisos:** `IsAuthenticated`
+
+### ✔ Respuesta Exitosa (200 OK)
+```json
+[
+  {
+    "codigoPedido": 15,
+    "idCliente": 3,
+    "cliente_nombre": "maria_s",
+    "idRepartidor": null,
+    "repartidor_nombre": null,
+    "num_whats": "0998887777",
+    "descripcion": "Impresión de tesis, 20 hojas",
+    "punto_origen": "Copias Juanita",
+    "punto_destino": "Facultad de Ingeniería",
+    "estado": "Publicado",
+    "fechaInicial": "2025-02-14T10:30:00Z",
+    "horaDeseada": "2025-02-14T12:00:00Z",
+    "fechaFinal": null,
+    "costoEnvio": "1.50",
+    "archivo_pdf": "[http://ejemplo.com/tesis.pdf](http://ejemplo.com/tesis.pdf)",
+    "formato_color": "Blanco y Negro"
+  }
+]
+
 ---
 
 # 1. 📄 Listar Todos los Pedidos
 
-Obtiene una lista de todos los pedidos registrados.
+Obtiene una lista de todos los pedidos registrados en el sistema, independientemente de su estado (Publicado, Aceptado, Entregado, Cancelado).
 
 **Método:** `GET`  
 **Endpoint:** `/api/pedidos/listar/`  
@@ -25,51 +58,90 @@ Obtiene una lista de todos los pedidos registrados.
 [
   {
     "codigoPedido": 1,
-    "cliente": "alan_p",
-    "repartidor": "marco_g",
+    "idCliente": 1,
+    "cliente_nombre": "alan_p",
+    "idRepartidor": 2,
+    "repartidor_nombre": "marco_g",
     "num_whats": "0991112222",
     "descripcion": "Llevar documento a la facultad FCI",
-    "punto_origen_id": 3,
-    "punto_destino_id": 6,
-    "estado": "Publicado",
+    "punto_origen": "Biblioteca Central",
+    "punto_destino": "Bloque F",
+    "estado": "Entregado",
     "fechaInicial": "2025-02-10T16:00:00Z",
-    "horaDeseada": "2025-02-11",
-    "fechaFinal": null,
-    "costoEnvio": "2.50"
+    "horaDeseada": null,
+    "fechaFinal": "2025-02-10T16:45:00Z",
+    "costoEnvio": "2.50",
+    "archivo_pdf": null,
+    "formato_color": null
   }
 ]
  ```
 
 ---
+### 3. Crear un pedido
+* **Método:** `POST`
+* **Endpoint:** `/api/pedido/crear/`
+* **Permisos:** `IsAuthenticated` (Requiere token)
 
-### 2. Crear un Usuario (Registro)
+* **Campos Obligatorios:**
+idCliente: ID del usuario que solicita.
+
+num_whats: Número de contacto.
+
+descripcion: Detalle del pedido.
+
+punto_origen: Ubicación de recogida (Texto).
+
+punto_destino: Ubicación de entrega (Texto).
+
+costoEnvio: Valor a pagar.
+
+* **Campos Opcionales:**
+horaDeseada: Fecha/Hora específica para la entrega.
+
+archivo_pdf: URL del archivo (si es impresión).
+
+formato_color: "Blanco y Negro" o "Color".
+
+* **Ejemplo Peticion:**
 ```json
 {
+  "idCliente": 5,
   "num_whats": "0991234567",
-  "descripcion": "Enviar paquete pequeño",
-  "punto_origen_id": 2,
-  "punto_destino_id": 5,
-  "horaDeseada": "2025-02-13",
-  "costoEnvio": "3.00"
+  "descripcion": "Impresión de diapositivas",
+  "punto_origen": "Cyber del frente",
+  "punto_destino": "Aula 102",
+  "costoEnvio": "3.00",
+  "archivo_pdf": "[https://nube.com/archivo.pdf](https://nube.com/archivo.pdf)",
+  "formato_color": "Color"
 }
 ```
-* **Respuesta Exitosa (201 Created):**
+
+* **Respuesta Exitosa (200 OK):**
 ```json
 {
   "codigoPedido": 10,
-  "cliente": "joshua",
-  "repartidor": null,
+  "idCliente": 5,
+  "cliente_nombre": "joshua",
+  "idRepartidor": null,
+  "repartidor_nombre": null,
   "num_whats": "0991234567",
-  "descripcion": "Enviar paquete pequeño",
-  "punto_origen_id": 2,
-  "punto_destino_id": 5,
+  "descripcion": "Impresión de diapositivas",
+  "punto_origen": "Cyber del frente",
+  "punto_destino": "Aula 102",
   "estado": "Publicado",
   "fechaInicial": "2025-02-12T19:40:00Z",
-  "horaDeseada": "2025-02-13",
+  "horaDeseada": null,
   "fechaFinal": null,
-  "costoEnvio": "3.00"
+  "costoEnvio": "3.00",
+  "archivo_pdf": "[https://nube.com/archivo.pdf](https://nube.com/archivo.pdf)",
+  "formato_color": "Color"
 }
 ```
+
+---
+
+
 ---
 ### 3. Obtener detalle de un pedido
 * **Método:** `GET`
@@ -80,26 +152,24 @@ Obtiene una lista de todos los pedidos registrados.
 ```json
 {
   "codigoPedido": 10,
-  "cliente": "joshua",
-  "repartidor": null,
-  "num_whats": "0991234567",
-  "descripcion": "Enviar paquete pequeño",
-  "punto_origen_id": 2,
-  "punto_destino_id": 5,
+  "cliente_nombre": "joshua",
+  "punto_origen": "Cyber del frente",
+  "punto_destino": "Aula 102",
   "estado": "Publicado",
   "fechaInicial": "2025-02-12T19:40:00Z",
-  "horaDeseada": "2025-02-13",
-  "fechaFinal": null,
+  "archivo_pdf": "[https://nube.com/archivo.pdf](https://nube.com/archivo.pdf)",
+  "formato_color": "Color",
   "costoEnvio": "3.00"
+  // ... resto de campos
 }
 ```
 ---
 ### 4. Actualizar pedido
-* **Método:** `PATCH`
+* **Método:** `PATCH o PUT`
 * **Endpoint:** `/api/pedidos/actualizar/<codigo>/`
 * **Ejemplo:** `/api/pedidos/actualizar/10/`
 * **Permisos:** `IsAuthenticated` (Requiere token)
-* **Request Body (Patch)**
+* **Request Body (Patch) - Ejemplo repartidor acepta pedido**
 ```json
 {
   "estado": "Aceptado",
@@ -111,11 +181,19 @@ Obtiene una lista de todos los pedidos registrados.
 
 {
   "codigoPedido": 10,
-  "cliente": "joshua",
-  "repartidor": "marco_g",
-  "descripcion": "Enviar paquete pequeño",
+  "idCliente": 5,
+  "cliente_nombre": "joshua",
+  "idRepartidor": 4,
+  "repartidor_nombre": "marco_repartidor",
+  "num_whats": "0991234567",
+  "descripcion": "Impresión de diapositivas",
+  "punto_origen": "Cyber del frente",
+  "punto_destino": "Aula 102",
   "estado": "Aceptado",
-  "costoEnvio": "3.00"
+  "fechaInicial": "2025-02-12T19:40:00Z",
+  "costoEnvio": "3.00",
+  "archivo_pdf": "[https://nube.com/archivo.pdf](https://nube.com/archivo.pdf)",
+  "formato_color": "Color"
 }
 ```
 ---
