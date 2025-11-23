@@ -31,8 +31,8 @@ Obtiene una lista filtrada mostrando únicamente los pedidos con estado **"Publi
     "repartidor_nombre": null,
     "num_whats": "0998887777",
     "descripcion": "Impresión de tesis, 20 hojas",
-    "punto_origen": "Copias Juanita",
-    "punto_destino": "Facultad de Ingeniería",
+    "punto_origen_id": "Copias Juanita",
+    "punto_destino_id": "Facultad de Ingeniería",
     "estado": "Publicado",
     "fechaInicial": "2025-02-14T10:30:00Z",
     "horaDeseada": "2025-02-14T12:00:00Z",
@@ -42,6 +42,7 @@ Obtiene una lista filtrada mostrando únicamente los pedidos con estado **"Publi
     "formato_color": "Blanco y Negro"
   }
 ]
+ ```
 
 ---
 
@@ -64,8 +65,8 @@ Obtiene una lista de todos los pedidos registrados en el sistema, independientem
     "repartidor_nombre": "marco_g",
     "num_whats": "0991112222",
     "descripcion": "Llevar documento a la facultad FCI",
-    "punto_origen": "Biblioteca Central",
-    "punto_destino": "Bloque F",
+    "punto_origen_id": "Biblioteca Central",
+    "punto_destino_id": "Bloque F",
     "estado": "Entregado",
     "fechaInicial": "2025-02-10T16:00:00Z",
     "horaDeseada": null,
@@ -109,10 +110,10 @@ formato_color: "Blanco y Negro" o "Color".
   "idCliente": 5,
   "num_whats": "0991234567",
   "descripcion": "Impresión de diapositivas",
-  "punto_origen": "Cyber del frente",
-  "punto_destino": "Aula 102",
+  "punto_origen_id": "Cyber del frente",
+  "punto_destino_id": "Aula 102",
   "costoEnvio": "3.00",
-  "archivo_pdf": "[https://nube.com/archivo.pdf](https://nube.com/archivo.pdf)",
+  "archivo_pdf": "https://nube.com/archivo.pdf",
   "formato_color": "Color"
 }
 ```
@@ -127,14 +128,14 @@ formato_color: "Blanco y Negro" o "Color".
   "repartidor_nombre": null,
   "num_whats": "0991234567",
   "descripcion": "Impresión de diapositivas",
-  "punto_origen": "Cyber del frente",
-  "punto_destino": "Aula 102",
+  "punto_origen_id": "Cyber del frente",
+  "punto_destino_id": "Aula 102",
   "estado": "Publicado",
   "fechaInicial": "2025-02-12T19:40:00Z",
   "horaDeseada": null,
   "fechaFinal": null,
   "costoEnvio": "3.00",
-  "archivo_pdf": "[https://nube.com/archivo.pdf](https://nube.com/archivo.pdf)",
+  "archivo_pdf": "https://nube.com/archivo.pdf",
   "formato_color": "Color"
 }
 ```
@@ -153,11 +154,11 @@ formato_color: "Blanco y Negro" o "Color".
 {
   "codigoPedido": 10,
   "cliente_nombre": "joshua",
-  "punto_origen": "Cyber del frente",
-  "punto_destino": "Aula 102",
+  "punto_origen_id": "Cyber del frente",
+  "punto_destino_id": "Aula 102",
   "estado": "Publicado",
   "fechaInicial": "2025-02-12T19:40:00Z",
-  "archivo_pdf": "[https://nube.com/archivo.pdf](https://nube.com/archivo.pdf)",
+  "archivo_pdf": "https://nube.com/archivo.pdf",
   "formato_color": "Color",
   "costoEnvio": "3.00"
   // ... resto de campos
@@ -187,12 +188,12 @@ formato_color: "Blanco y Negro" o "Color".
   "repartidor_nombre": "marco_repartidor",
   "num_whats": "0991234567",
   "descripcion": "Impresión de diapositivas",
-  "punto_origen": "Cyber del frente",
-  "punto_destino": "Aula 102",
+  "punto_origen_id": "Cyber del frente",
+  "punto_destino_id": "Aula 102",
   "estado": "Aceptado",
   "fechaInicial": "2025-02-12T19:40:00Z",
   "costoEnvio": "3.00",
-  "archivo_pdf": "[https://nube.com/archivo.pdf](https://nube.com/archivo.pdf)",
+  "archivo_pdf": "https://nube.com/archivo.pdf",
   "formato_color": "Color"
 }
 ```
