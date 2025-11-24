@@ -14,3 +14,4 @@ python manage.py migrate
 
 #Carga de datos
 python manage.py cargar_usuarios
+python manage.py cargar_pedidos
