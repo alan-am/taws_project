@@ -7,7 +7,8 @@
   
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
-  
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
   <!-- React y ReactDOM -->
   <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
@@ -279,240 +280,66 @@
       );
     }
 
-    // --- Componente: Nueva Página "Impresiones Rápidas" ---
-    function FastPrintsView({ onGoBack, onNavigateToSendReceive, onNavigateToBuyTake }) {
-      // --- Estado para el Modal ---
-      const [isModalOpen, setIsModalOpen] = useState(false);
-      
-      // --- Estado para el formulario de Información ---
-      const [fecha, setFecha] = useState("");
-      const [recogida, setRecogida] = useState("");
-      const [hora, setHora] = useState("");
-      
-      // --- Lógica de Validación (simplificada para este formulario) ---
-      const isInfoValid = fecha.trim() !== "" && recogida.trim() !== "" && hora.trim() !== "";
-      
-      // (Estado y lógica del formulario de Configuración se mantienen)
-      const [pages, setPages] = useState("");
-      const [copies, setCopies] = useState("1");
-      const [color, setColor] = useState("Color");
-      const [paperSize, setPaperSize] = useState("A4");
-      const [pagesPerSheet, setPagesPerSheet] = useState("1");
-      const [scale, setScale] = useState("Predeterminado");
-      const [fileName, setFileName] = useState(null);
-      const fileInputRef = useRef(null);
-      
-      const handleUploadClick = () => fileInputRef.current.click();
-      const handleFileSelect = (event) => {
-        const file = event.target.files[0];
-        if (file) setFileName(file.name);
-      };
-      
-      const [openDropdown, setOpenDropdown] = useState(null);
-      const pageOptions = ["Todas", "Solo páginas impares", "Solo páginas pares", "Personalizado"];
-      const colorOptions = ["Color", "Blanco y Negro"];
-      const paperSizeOptions = ["A4", "Carta", "102 x 152 mm (4 x 6 in)", "89 x 127 mm (3.5 x 5 in)", "Postcard 100 x 148 mm"];
-      const pagesPerSheetOptions = ["1", "2", "4", "6", "9", "16"];
-      const scaleOptions = ["Predeterminado", "Ajustar al área de impresión", "Ajustar al tamaño de papel", "Personalizado"];
-      
-      const handleSelect = (setter) => (value) => {
-        setter(value);
-        setOpenDropdown(null);
-      };
-      const toggleDropdown = (name) => {
-        setOpenDropdown(openDropdown === name ? null : name);
-      };
+// --- Componente de Mapa Interactivo (CORREGIDO) ---
+// --- Componente de Mapa Interactivo (CORREGIDO) ---
+    // Ahora acepta 'mapId' para evitar choques entre pantallas
+    function MapComponent({ onLocationSelect, mapId }) {
+      const mapRef = useRef(null); 
+      const markerRef = useRef(null); 
+      const onSelectRef = useRef(onLocationSelect);
 
-      return (
-        <div className="min-h-screen bg-gray-50 p-4 sm:p-8 animate-in fade-in duration-300">
-          <div className="w-full max-w-4xl mx-auto">
-            {/* Header de la nueva vista (solo flecha) */}
-            <div className="flex items-center justify-between mb-6">
-              <button
-                onClick={onGoBack}
-                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-              >
-                <ArrowLeft />
-              </button>
-              
-              {/* Botones de Píldora */}
-              <div className="flex gap-2">
-                <button 
-                  onClick={onNavigateToSendReceive}
-                  className="px-5 py-2 bg-gray-200 text-gray-800 rounded-full font-medium text-sm hover:bg-gray-300 transition-colors"
-                >
-                  Enviar/Recoger
-                </button>
-                <button className="px-5 py-2 bg-black text-white rounded-full font-medium text-sm">
-                  Impresiones rápidas
-                </button>
-                <button 
-                  onClick={onNavigateToBuyTake}
-                  className="px-5 py-2 bg-gray-200 text-gray-800 rounded-full font-medium text-sm hover:bg-gray-300 transition-colors"
-                >
-                  Comprar/LLevar
-                </button>
-              </div>
-              <div className="w-10 h-10"></div> {/* Espaciador */}
-            </div>
+      useEffect(() => {
+        onSelectRef.current = onLocationSelect;
+      }, [onLocationSelect]);
 
+      useEffect(() => {
+        if (mapRef.current) return;
 
-            {/* Grid de 2 columnas: Formulario y Mapa */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        // Usamos el ID único que nos pasan
+        const containerId = mapId || 'default-map'; 
+        
+        // Validación de seguridad: Si el div no existe aún, no intentamos crear el mapa
+        if (!document.getElementById(containerId)) return;
 
-              {/* Columna 1: Formularios */}
-              <div className="flex flex-col gap-6">
-                {/* Card 1: Información (MODIFICADA) */}
-                <div className="bg-white rounded-2xl shadow-2xl p-6">
-                  <h2 className="text-3xl font-bold text-gray-800 mb-6">
-                    Información
-                  </h2>
-                  <div className="space-y-4">
-                    <input
-                      type="text"
-                      placeholder="Fecha"
-                      onFocus={(e) => (e.target.type = "date")}
-                      onBlur={(e) => (e.target.type = "text")}
-                      className="w-full px-4 py-3 bg-gray-100 border border-gray-100 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent outline-none transition-all text-gray-700"
-                      value={fecha}
-                      onChange={(e) => setFecha(e.target.value)}
-                    />
-                    <input
-                      type="text"
-                      placeholder="Punto de Recogida"
-                      className="w-full px-4 py-3 bg-gray-100 border border-gray-100 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent outline-none transition-all"
-                      value={recogida}
-                      onChange={(e) => setRecogida(e.target.value)}
-                    />
-                    <input
-                      type="text"
-                      placeholder="Hora de Entrega Deseada"
-                      onFocus={(e) => (e.target.type = "time")}
-                      onBlur={(e) => (e.target.type = "text")}
-                      className="w-full px-4 py-3 bg-gray-100 border border-gray-100 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent outline-none transition-all text-gray-700"
-                      value={hora}
-                      onChange={(e) => setHora(e.target.value)}
-                    />
-                    {/* Botón de Confirmar (MODIFICADO) */}
-                    <button 
-                      onClick={() => setIsModalOpen(true)}
-                      disabled={!isInfoValid} // Validación
-                      className={
-                        isInfoValid
-                          ? "w-full bg-black text-white py-3 rounded-lg font-medium hover:bg-gray-800 transition-colors"
-                          : "w-full bg-gray-200 text-gray-500 py-3 rounded-lg font-medium cursor-not-allowed"
-                      }
-                    >
-                      Confirmar
-                    </button>
-                  </div>
-                </div>
+        const ESPOL_COORDS = [-2.1467, -79.9654]; 
+        try {
+            const map = L.map(containerId).setView(ESPOL_COORDS, 16); 
+            mapRef.current = map;
 
-                {/* Card 2: Configuración (Sin cambios en la lógica interna) */}
-                <div className="bg-white rounded-2xl shadow-2xl p-6">
-                  <h3 className="text-xl font-semibold text-gray-800 mb-4">
-                    Configuración
-                  </h3>
-                  <div className="space-y-4">
-                    <input type="file" ref={fileInputRef} onChange={handleFileSelect} style={{ display: "none" }} accept=".pdf" />
-                    <button onClick={handleUploadClick} className="w-full bg-gray-100 text-gray-700 py-3 rounded-lg font-medium hover:bg-gray-200 transition-colors">
-                      {fileName || "Subir PDF"}
-                    </button>
-                    <div className="relative">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Páginas</label>
-                      <button onClick={() => toggleDropdown("pages")} className="w-full flex justify-between items-center px-4 py-3 bg-gray-100 border border-gray-100 rounded-lg text-left">
-                        <span className={pages === "Personalizado" ? "text-gray-500" : "text-gray-700"}>
-                          {pages === "Personalizado" ? "Personalizado" : pages || "Todas"}
-                        </span>
-                        <ChevronDown />
-                      </button>
-                      {openDropdown === "pages" && (<DropdownMenu options={pageOptions} onSelect={handleSelect(setPages)} />)}
-                    </div>
-                    {pages === "Personalizado" && (
-                       <input type="text" placeholder="p. ej: 1-5,8,11-13" className="w-full px-4 py-3 bg-gray-100 border border-gray-100 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent outline-none transition-all" />
-                    )}
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Copias</label>
-                        <input type="number" value={copies} onChange={(e) => setCopies(e.target.value)} className="w-full px-4 py-3 bg-gray-100 border border-gray-100 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent outline-none transition-all" />
-                      </div>
-                      <div className="relative">
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Color</label>
-                        <button onClick={() => toggleDropdown("color")} className="w-full flex justify-between items-center px-4 py-3 bg-gray-100 border border-gray-100 rounded-lg text-left">
-                          <span className="text-gray-700">{color}</span>
-                          <ChevronDown />
-                        </button>
-                        {openDropdown === "color" && (<DropdownMenu options={colorOptions} onSelect={handleSelect(setColor)} />)}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap',
+                maxZoom: 19
+            }).addTo(map);
 
-              {/* Columna 2: Mapa y Más Ajustes (Sin cambios) */}
-              <div className="flex flex-col gap-6">
-                <div className="bg-white rounded-2xl shadow-2xl p-4 flex items-center justify-center min-h-[300px] md:h-full">
-                  <div className="w-full h-full bg-gray-100 rounded-lg flex items-center justify-center border-2 border-dashed border-gray-300">
-                    <div className="text-center text-gray-500">
-                      <MapPin className="w-16 h-16 text-gray-400 mx-auto" />
-                      <p className="font-medium mt-2">Espacio para el mapa</p>
-                    </div>
-                  </div>
-                </div>
-                <div className="bg-white rounded-2xl shadow-2xl p-6">
-                   <h3 className="text-xl font-semibold text-gray-800 mb-4">
-                    Más ajustes
-                  </h3>
-                  <div className="space-y-4">
-                    <div className="relative">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Tamaño de Papel</label>
-                      <button onClick={() => toggleDropdown("paperSize")} className="w-full flex justify-between items-center px-4 py-3 bg-gray-100 border border-gray-100 rounded-lg text-left">
-                        <span className="text-gray-700">{paperSize}</span>
-                        <ChevronDown />
-                      </button>
-                      {openDropdown === "paperSize" && (<DropdownMenu options={paperSizeOptions} onSelect={handleSelect(setPaperSize)} />)}
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="relative">
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Páginas por hoja</label>
-                        <button onClick={() => toggleDropdown("pagesPerSheet")} className="w-full flex justify-between items-center px-4 py-3 bg-gray-100 border border-gray-100 rounded-lg text-left">
-                          <span className="text-gray-700">{pagesPerSheet}</span>
-                          <ChevronDown />
-                        </button>
-                        {openDropdown === "pagesPerSheet" && (<DropdownMenu options={pagesPerSheetOptions} onSelect={handleSelect(setPagesPerSheet)} />)}
-                      </div>
-                      <div className="relative">
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Escala</label>
-                        <button onClick={() => toggleDropdown("scale")} className="w-full flex justify-between items-center px-4 py-3 bg-gray-100 border border-gray-100 rounded-lg text-left">
-                          <span className="text-gray-700">{scale}</span>
-                          <ChevronDown />
-                        </button>
-                        {openDropdown === "scale" && (<DropdownMenu options={scaleOptions} onSelect={handleSelect(setScale)} />)}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
+            map.on('click', function(e) {
+                const { lat, lng } = e.latlng;
+                if (markerRef.current) {
+                    markerRef.current.setLatLng([lat, lng]);
+                } else {
+                    markerRef.current = L.marker([lat, lng]).addTo(map);
+                }
+                if (onSelectRef.current) {
+                    onSelectRef.current(`Ubicación: ${lat.toFixed(5)}, ${lng.toFixed(5)}`);
+                }
+            });
+        } catch (err) {
+            console.error("Error inicializando mapa:", err);
+        }
 
-            </div> {/* Cierre del grid */}
-          </div>
-          
-          {isModalOpen && <ConfirmacionModal 
-            onClose={() => setIsModalOpen(false)}
-            servicio="Impresiones rápidas"
-            desde={recogida}
-            hasta="N/A"
-            hora={hora}
-          />}
-          
-        </div>
-      );
+        return () => {
+            if (mapRef.current) {
+                mapRef.current.off();
+                mapRef.current.remove();
+                mapRef.current = null;
+            }
+        };
+      }, [mapId]); // Se reinicia si cambia el ID
+
+      return <div id={mapId || 'default-map'} className="w-full h-full z-0"></div>;
     }
+// --- Componente: Impresiones Rápidas (CONECTADO) ---
 
-    // --- Componente: Nueva Página "Enviar/Recoger" ---
     function SendReceiveView({ onGoBack, onNavigateToFastPrints, onNavigateToBuyTake }) {
-      
-      // --- Estado del Formulario ---
       const [isModalOpen, setIsModalOpen] = useState(false);
       const [fecha, setFecha] = useState("");
       const [recogida, setRecogida] = useState("");
@@ -520,533 +347,272 @@
       const [hora, setHora] = useState("");
       const [descripcion, setDescripcion] = useState("");
       const [whatsapp, setWhatsapp] = useState("");
-// --- Lógica de Envío al Backend ---
+      const [activeField, setActiveField] = useState("recogida"); 
+
+      const isFormValid = fecha && recogida && entrega && hora && descripcion && whatsapp;
+
+      const handleMapSelection = (coordTexto) => {
+          if (activeField === "recogida") setRecogida(coordTexto);
+          else setEntrega(coordTexto);
+      };
+
       const handleSubmitOrder = async () => {
           try {
-              // Validar sesión
-              if (!localStorage.getItem('accessToken')) {
-                  alert("Debes iniciar sesión primero para realizar un pedido.");
-                  return;
-              }
-
-              // Preparar datos para el Backend Django
+              if (!localStorage.getItem('accessToken')) { alert("Debes iniciar sesión."); return; }
               const payload = {
                   num_whats: whatsapp,
-                  // Concatenamos info extra en descripción porque el modelo es simple
-                  descripcion: `${descripcion} (Recogida: ${recogida}, Entrega: ${entrega})`, 
-                  punto_origen_id: 1, // ID Dummy (Backend requiere entero)
-                  punto_desitno_id: 1, // ID Dummy
-                  // Combinar fecha y hora en formato ISO (simplificado)
-                  horaDeseada: new Date().toISOString(), 
-                  fechaInicial: new Date().toISOString(),
-                  costoEnvio: 3.75, // Total calculado
-                  estado: "Publicado"
+                  descripcion: `${descripcion} (De: ${recogida} -> A: ${entrega})`, 
+                  punto_origen_id: 1, punto_desitno_id: 1, 
+                  horaDeseada: new Date().toISOString(), fechaInicial: new Date().toISOString(),
+                  costoEnvio: 3.75, estado: "Publicado"
               };
-
               await apiCall('/pedido/crear/', 'POST', payload);
-              alert("✅ ¡Pedido creado exitosamente en la base de datos!");
-              onGoBack(); // Volver al inicio
-          } catch (error) {
-              alert("Error al crear pedido: " + error.message);
-              throw error; // Para que el modal sepa que falló y quite el loading
-          }
+              alert("✅ ¡Pedido creado exitosamente!");
+              onGoBack();
+          } catch (error) { alert("Error: " + error.message); }
       };
-      // --- Lógica de Validación ---
-      const isFormValid = fecha.trim() !== "" && 
-                          recogida.trim() !== "" && 
-                          entrega.trim() !== "" && 
-                          hora.trim() !== "" && 
-                          descripcion.trim() !== "" && 
-                          whatsapp.trim() !== "";
 
       return (
         <div className="min-h-screen bg-white p-4 sm:p-8 animate-in fade-in duration-300">
           <div className="w-full max-w-6xl mx-auto">
-            
-            {/* Barra de Navegación Superior (Píldoras) */}
             <div className="flex items-center justify-between mb-6">
-              <button
-                onClick={onGoBack}
-                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-              >
-                <ArrowLeft />
-              </button>
-              
+              <button onClick={onGoBack} className="p-2 hover:bg-gray-100 rounded-full"><ArrowLeft /></button>
               <div className="flex gap-2">
-                <button className="px-5 py-2 bg-black text-white rounded-full font-medium text-sm">
-                  Enviar/Recoger
-                </button>
-                <button 
-                  onClick={onNavigateToFastPrints}
-                  className="px-5 py-2 bg-gray-200 text-gray-800 rounded-full font-medium text-sm hover:bg-gray-300 transition-colors"
-                >
-                  Impresiones rápidas
-                </button>
-                <button 
-                  onClick={onNavigateToBuyTake}
-                  className="px-5 py-2 bg-gray-200 text-gray-800 rounded-full font-medium text-sm hover:bg-gray-300 transition-colors"
-                >
-                  Comprar/LLevar
-                </button>
+                <button className="px-5 py-2 bg-black text-white rounded-full font-medium text-sm">Enviar/Recoger</button>
               </div>
-              
-              <div className="w-10 h-10"></div>{/* Espaciador */}
+              <div className="w-10 h-10"></div>
             </div>
 
-            {/* Layout de 2 columnas */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              
-              {/* Columna Izquierda (Formulario "Información") */}
               <div className="bg-white rounded-2xl shadow-lg p-6 sm:p-8 space-y-4">
-                <h2 className="text-3xl font-bold text-gray-800 mb-4">
-                  Información
-                </h2>
+                <h2 className="text-3xl font-bold text-gray-800 mb-4">Información</h2>
+                <input type="text" placeholder="Fecha" onFocus={(e)=>e.target.type='date'} onBlur={(e)=>e.target.type='text'} className="w-full px-4 py-3 bg-gray-100 rounded-lg outline-none focus:ring-2 focus:ring-black" value={fecha} onChange={(e)=>setFecha(e.target.value)}/>
                 
-                <input 
-                  type="text" 
-                  placeholder="Fecha" 
-                  onFocus={(e) => (e.target.type = "date")}
-                  onBlur={(e) => (e.target.type = "text")}
-                  className="w-full px-4 py-3 bg-gray-100 rounded-lg outline-none focus:ring-2 focus:ring-black"
-                  value={fecha}
-                  onChange={(e) => setFecha(e.target.value)}
-                />
-                <input 
-                  type="text" 
-                  placeholder="Punto de Recogida" 
-                  className="w-full px-4 py-3 bg-gray-100 rounded-lg outline-none focus:ring-2 focus:ring-black"
-                  value={recogida}
-                  onChange={(e) => setRecogida(e.target.value)}
-                />
-                <input 
-                  type="text" 
-                  placeholder="Punto de Entrega" 
-                  className="w-full px-4 py-3 bg-gray-100 rounded-lg outline-none focus:ring-2 focus:ring-black"
-                  value={entrega}
-                  onChange={(e) => setEntrega(e.target.value)}
-                />
-                <input 
-                  type="text" 
-                  placeholder="Hora de Entrega Deseada" 
-                  onFocus={(e) => (e.target.type = "time")}
-                  onBlur={(e) => (e.target.type = "text")}
-                  className="w-full px-4 py-3 bg-gray-100 rounded-lg outline-none focus:ring-2 focus:ring-black"
-                  value={hora}
-                  onChange={(e) => setHora(e.target.value)}
-                />
-                <textarea 
-                  placeholder="Descripción ¿Qué se transporta?" 
-                  rows="4"
-                  className="w-full px-4 py-3 bg-gray-100 rounded-lg outline-none focus:ring-2 focus:ring-black"
-                  value={descripcion}
-                  onChange={(e) => setDescripcion(e.target.value)}
-                ></textarea>
-                <input 
-                  type="tel" 
-                  placeholder="Numero de Whatsapp" 
-                  className="w-full px-4 py-3 bg-gray-100 rounded-lg outline-none focus:ring-2 focus:ring-black"
-                  value={whatsapp}
-                  onChange={(e) => setWhatsapp(e.target.value)}
-                />
-                
-                {/* Botón de Acción (DINÁMICO) */}
-                <button 
-                  onClick={() => setIsModalOpen(true)}
-                  disabled={!isFormValid} // Deshabilitado si el formulario no es válido
-                  className={
-                    isFormValid
-                      ? "w-full bg-black text-white py-3 rounded-lg font-medium hover:bg-gray-800 transition-colors mt-2"
-                      : "w-full bg-gray-200 text-gray-500 py-3 rounded-lg font-medium cursor-not-allowed mt-2"
-                  }
-                >
-                  Confirmar
-                </button>
-              </div>
-              
-              {/* Columna Derecha (Espacio para el Mapa) */}
-              <div className="bg-white rounded-2xl shadow-lg p-4 flex items-center justify-center min-h-[400px]">
-                <div className="text-center text-gray-500">
-                  <MapPin className="w-16 h-16 text-gray-400 mx-auto" />
-                  <p className="font-medium mt-2">Espacio para el mapa</p>
+                <div className={`transition-all rounded-lg ${activeField === 'recogida' ? 'ring-2 ring-blue-500' : ''}`}>
+                    <input type="text" placeholder="📍 Punto de Recogida (Toca aquí)" className="w-full px-4 py-3 bg-gray-100 rounded-lg outline-none border border-transparent focus:bg-white" value={recogida} onChange={(e)=>setRecogida(e.target.value)} onFocus={() => setActiveField('recogida')} />
                 </div>
+                <div className={`transition-all rounded-lg ${activeField === 'entrega' ? 'ring-2 ring-green-500' : ''}`}>
+                    <input type="text" placeholder="🏁 Punto de Entrega (Toca aquí)" className="w-full px-4 py-3 bg-gray-100 rounded-lg outline-none border border-transparent focus:bg-white" value={entrega} onChange={(e)=>setEntrega(e.target.value)} onFocus={() => setActiveField('entrega')} />
+                </div>
+
+                <input type="text" placeholder="Hora de Entrega" onFocus={(e)=>e.target.type='time'} onBlur={(e)=>e.target.type='text'} className="w-full px-4 py-3 bg-gray-100 rounded-lg outline-none focus:ring-2 focus:ring-black" value={hora} onChange={(e)=>setHora(e.target.value)}/>
+                <textarea placeholder="Descripción" rows="4" className="w-full px-4 py-3 bg-gray-100 rounded-lg outline-none focus:ring-2 focus:ring-black" value={descripcion} onChange={(e)=>setDescripcion(e.target.value)}></textarea>
+                <input type="tel" placeholder="Whatsapp" className="w-full px-4 py-3 bg-gray-100 rounded-lg outline-none focus:ring-2 focus:ring-black" value={whatsapp} onChange={(e)=>setWhatsapp(e.target.value)}/>
+                <button onClick={() => setIsModalOpen(true)} disabled={!isFormValid} className={`w-full py-3 rounded-lg font-medium text-white mt-2 transition-colors ${isFormValid ? 'bg-black hover:bg-gray-800' : 'bg-gray-300 cursor-not-allowed'}`}>Confirmar</button>
               </div>
 
+              <div className={`bg-white rounded-2xl shadow-lg overflow-hidden relative min-h-[400px] border-4 transition-colors ${activeField === 'recogida' ? 'border-blue-100' : 'border-green-100'}`}>
+                 {/* AQUÍ ESTÁ LA CLAVE: mapId ÚNICO */}
+                 <MapComponent onLocationSelect={handleMapSelection} mapId="mapa-envios" />
+                 <div className={`absolute bottom-4 right-4 backdrop-blur px-4 py-2 rounded-lg shadow-md text-xs font-bold z-[400] pointer-events-none border transition-colors ${activeField === 'recogida' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-green-50 text-green-700 border-green-200'}`}>
+                    {activeField === 'recogida' ? '📍 Seleccionando: RECOGIDA' : '🏁 Seleccionando: ENTREGA'}
+                 </div>
+              </div>
             </div>
           </div>
-          
-          {isModalOpen && <ConfirmacionModal 
-            onClose={() => setIsModalOpen(false)}
-            servicio="Enviar/Recoger"
-            desde={recogida}
-            hasta={entrega}
-            hora={hora}
-            onConfirmAction={handleSubmitOrder}
-          />}   
-          
+          {isModalOpen && <ConfirmacionModal onClose={() => setIsModalOpen(false)} servicio="Enviar/Recoger" desde={recogida} hasta={entrega} hora={hora} onConfirmAction={handleSubmitOrder}/>}
         </div>
       );
     }
-    
-    // --- Componente: Nueva Página "Comprar/LLevar" ---
-    function BuyTakeView({ onGoBack, onNavigateToSendReceive, onNavigateToFastPrints }) {
+
+
+// --- Componente: Impresiones Rápidas (CON MAPA) ---
+    function FastPrintsView({ onGoBack, onNavigateToSendReceive, onNavigateToBuyTake }) {
+      const [isModalOpen, setIsModalOpen] = useState(false);
       
-      // --- Estado del Formulario de Información ---
+      // Estados Información
+      const [fecha, setFecha] = useState("");
+      const [recogida, setRecogida] = useState("");
+      const [hora, setHora] = useState("");
+      
+      // Estados Configuración
+      const [pages, setPages] = useState("Todas");
+      const [copies, setCopies] = useState("1");
+      const [color, setColor] = useState("Color");
+      const [paperSize, setPaperSize] = useState("A4");
+      const [fileName, setFileName] = useState(null);
+      const fileInputRef = useRef(null);
+      const [openDropdown, setOpenDropdown] = useState(null);
+      
+      const isInfoValid = fecha && recogida && hora && fileName;
+
+      const handleUploadClick = () => fileInputRef.current.click();
+      const handleFileSelect = (e) => { if(e.target.files[0]) setFileName(e.target.files[0].name); };
+      
+      const handleSubmitPrint = async () => {
+          try {
+              if (!localStorage.getItem('accessToken')) { alert("Debes iniciar sesión."); return; }
+
+              const descripcion = `IMPRESIÓN: ${fileName} (${copies} copias, ${color}, ${paperSize}) - Retirar en: ${recogida}`;
+              
+              await apiCall('/pedido/crear/', 'POST', {
+                  num_whats: "0999999999",
+                  descripcion,
+                  punto_origen_id: 1, punto_desitno_id: 1,
+                  horaDeseada: new Date().toISOString(),
+                  fechaInicial: new Date().toISOString(),
+                  costoEnvio: 1.50, estado: "Publicado"
+              });
+              alert("✅ Orden de impresión enviada.");
+              onGoBack();
+          } catch (error) { alert("Error: " + error.message); }
+      };
+
+      const toggleDropdown = (name) => setOpenDropdown(openDropdown === name ? null : name);
+      const handleSelect = (setter) => (val) => { setter(val); setOpenDropdown(null); };
+
+      return (
+        <div className="min-h-screen bg-gray-50 p-4 sm:p-8 animate-in fade-in duration-300">
+          <div className="w-full max-w-4xl mx-auto">
+            <div className="flex items-center justify-between mb-6">
+              <button onClick={onGoBack} className="p-2 hover:bg-gray-100 rounded-full"><ArrowLeft /></button>
+              <div className="flex gap-2">
+                <button onClick={onNavigateToSendReceive} className="px-5 py-2 bg-gray-200 text-gray-800 rounded-full font-medium text-sm hover:bg-gray-300">Enviar/Recoger</button>
+                <button className="px-5 py-2 bg-black text-white rounded-full font-medium text-sm">Impresiones rápidas</button>
+                <button onClick={onNavigateToBuyTake} className="px-5 py-2 bg-gray-200 text-gray-800 rounded-full font-medium text-sm hover:bg-gray-300">Comprar/Llevar</button>
+              </div>
+              <div className="w-10 h-10"></div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="flex flex-col gap-6">
+                {/* Formulario */}
+                <div className="bg-white rounded-2xl shadow-2xl p-6">
+                  <h2 className="text-3xl font-bold text-gray-800 mb-6">Información</h2>
+                  <div className="space-y-4">
+                    <input type="text" placeholder="Fecha" onFocus={(e)=>e.target.type='date'} onBlur={(e)=>e.target.type='text'} className="w-full px-4 py-3 bg-gray-100 rounded-lg outline-none" value={fecha} onChange={(e)=>setFecha(e.target.value)}/>
+                    
+                    {/* Input conectado al mapa */}
+                    <input type="text" placeholder="📍 Punto de Recogida (Usa el mapa)" className="w-full px-4 py-3 bg-gray-100 rounded-lg outline-none border-2 focus:border-blue-500" value={recogida} onChange={(e)=>setRecogida(e.target.value)}/>
+                    
+                    <input type="text" placeholder="Hora Deseada" onFocus={(e)=>e.target.type='time'} onBlur={(e)=>e.target.type='text'} className="w-full px-4 py-3 bg-gray-100 rounded-lg outline-none" value={hora} onChange={(e)=>setHora(e.target.value)}/>
+                    <button onClick={() => setIsModalOpen(true)} disabled={!isInfoValid} className={`w-full py-3 rounded-lg font-medium text-white transition-colors ${isInfoValid ? 'bg-black hover:bg-gray-800' : 'bg-gray-300'}`}>Confirmar</button>
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-2xl shadow-2xl p-6">
+                  <h3 className="text-xl font-semibold text-gray-800 mb-4">Configuración</h3>
+                  <div className="space-y-4">
+                    <input type="file" ref={fileInputRef} onChange={handleFileSelect} style={{ display: "none" }} accept=".pdf,.doc,.docx" />
+                    <button onClick={handleUploadClick} className="w-full bg-gray-100 text-gray-700 py-3 rounded-lg font-medium hover:bg-gray-200 border border-dashed border-gray-300">{fileName ? `📄 ${fileName}` : "Subir Archivo"}</button>
+                    <div className="relative">
+                        <button onClick={()=>toggleDropdown("color")} className="w-full flex justify-between items-center px-4 py-3 bg-gray-100 rounded-lg mt-1"><span>{color}</span><ChevronDown/></button>
+                        {openDropdown === "color" && <DropdownMenu options={["Color", "Blanco y Negro"]} onSelect={handleSelect(setColor)}/>}
+                    </div>
+                    <input type="number" min="1" value={copies} onChange={(e)=>setCopies(e.target.value)} className="w-full px-4 py-3 bg-gray-100 rounded-lg mt-1" placeholder="Copias"/>
+                  </div>
+                </div>
+              </div>
+
+              {/* MAPA REAL */}
+              <div className="flex flex-col gap-6 h-full">
+                <div className="bg-white rounded-2xl shadow-2xl overflow-hidden relative h-full min-h-[400px] border border-gray-200">
+                   <MapComponent onLocationSelect={(text) => setRecogida(text)} />
+                   <div className="absolute bottom-4 right-4 bg-white/90 backdrop-blur px-4 py-2 rounded-lg shadow-md text-xs font-bold text-gray-700 z-[400] pointer-events-none border border-gray-100">
+                      📍 Toca para seleccionar recogida
+                   </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          {isModalOpen && <ConfirmacionModal onClose={() => setIsModalOpen(false)} servicio="Impresiones Rápidas" desde={recogida} hasta="Tu mano" hora={hora} onConfirmAction={handleSubmitPrint}/>}
+        </div>
+      );
+    }
+// --- Vista Principal: Enviar/Recoger (CONECTADA + MAPA INTELIGENTE) ---
+
+// --- Componente: Comprar/Llevar (CON MAPA INTELIGENTE) ---
+    function BuyTakeView({ onGoBack, onNavigateToSendReceive, onNavigateToFastPrints }) {
+      // ... (Mismos estados que antes) ...
       const [storeName, setStoreName] = useState("");
       const [storeAddress, setStoreAddress] = useState("");
       const [deliveryPoint, setDeliveryPoint] = useState("");
-
-      // --- Estado de la Lista de Compras ---
-      const [items, setItems] = useState([]); // Array de objetos: { id, description, quantity, cost }
-      const [nextId, setNextId] = useState(1); // Para IDs únicos
-      
-      // --- Estado de UI y Validación ---
+      const [whatsapp, setWhatsapp] = useState("");
+      const [activeField, setActiveField] = useState("store"); 
+      const [items, setItems] = useState([]); 
+      const [nextId, setNextId] = useState(1);
       const [isModalOpen, setIsModalOpen] = useState(false);
-      const [showTooltip, setShowTooltip] = useState(false);
-      let tooltipTimeout = useRef(null); // Ref para manejar el timeout del tooltip
+      const isInfoValid = storeName && storeAddress && deliveryPoint && whatsapp;
+      const areItemsValid = items.length > 0 && items.every(i => i.description && i.quantity > 0);
 
-      // --- Mensaje de Error (Reemplazo de alert) ---
-      const [errorMsg, setErrorMsg] = useState(null);
-      
-      // --- Función de Alerta Personalizada ---
-      const showAlert = (message) => {
-        setErrorMsg(message);
-        setTimeout(() => setErrorMsg(null), 4000); // Ocultar después de 4 seg
-      }
-
-      // --- Lógica de la Lista de Compras ---
-      
-      const handleAddItem = () => {
-        setItems([...items, { id: nextId, description: '', quantity: 1, cost: '' }]);
-        setNextId(nextId + 1); // Incrementar el ID para el próximo item
+      const handleMapSelection = (coordTexto) => {
+          if (activeField === "store") setStoreAddress(coordTexto);
+          else setDeliveryPoint(coordTexto);
+      };
+      const handleAddItem = () => { setItems([...items, { id: nextId, description: '', quantity: 1, cost: '' }]); setNextId(nextId + 1); };
+      const handleDeleteItem = (id) => setItems(items.filter(i => i.id !== id));
+      const handleItemChange = (id, field, value) => { setItems(curr => curr.map(i => i.id === id ? { ...i, [field]: value } : i)); };
+      const handleSubmitBuy = async () => {
+          try {
+              if (!localStorage.getItem('accessToken')) { alert("Inicia sesión primero."); return; }
+              const listaTexto = items.map(i => `- ${i.quantity}x ${i.description} (Est: $${i.cost || '?'})`).join('\n');
+              const descripcion = `COMPRAR: ${storeName} (${storeAddress}) -> Entregar: ${deliveryPoint}\nLISTA:\n${listaTexto}`;
+              await apiCall('/pedido/crear/', 'POST', {
+                  num_whats: whatsapp, descripcion, punto_origen_id: 1, punto_desitno_id: 1,
+                  horaDeseada: new Date().toISOString(), fechaInicial: new Date().toISOString(),
+                  costoEnvio: 2.50, estado: "Publicado"
+              });
+              alert("✅ Pedido de compra creado."); onGoBack();
+          } catch (e) { alert("Error: " + e.message); }
       };
 
-      const handleDeleteItem = (id) => {
-        setItems(items.filter(item => item.id !== id));
-      };
-
-      // Handler genérico para actualizar un campo de un item
-      const handleItemChange = (id, field, value) => {
-        setItems(currentItems =>
-          currentItems.map(item => {
-            if (item.id === id) {
-              // Manejo especial para cantidad (no menor a 1)
-              if (field === 'quantity') {
-                const newQuantity = parseInt(value) || 1;
-                return { ...item, quantity: Math.max(1, newQuantity) };
-              }
-              return { ...item, [field]: value };
-            }
-            return item;
-          })
-        );
-      };
-
-      // Handler para botones +/-
-      const handleQuantityAdjust = (id, amount) => {
-        setItems(currentItems =>
-          currentItems.map(item => {
-            if (item.id === id) {
-              const newQuantity = (parseInt(item.quantity) || 1) + amount;
-              return { ...item, quantity: Math.max(1, newQuantity) }; // No puede ser menor a 1
-            }
-            return item;
-          })
-        );
-      };
-
-      // --- Cálculos y Validación ---
-      
-      // Calcular el total a pagar sumando los costos estimados
-      const totalPagar = items.reduce((sum, item) => {
-        return sum + (parseFloat(item.cost) || 0) * (parseInt(item.quantity) || 1);
-      }, 0);
-
-      // Validación de la sección de Información
-      const isInfoValid = storeName.trim() !== "" && 
-                          storeAddress.trim() !== "" && 
-                          deliveryPoint.trim() !== "";
-                          
-      // Validación de la lista de items
-      const areItemsValid = items.length > 0 && items.every(item => 
-                            item.description.trim() !== "" &&
-                            (parseInt(item.quantity) || 0) > 0 &&
-                            (parseFloat(item.cost) || 0) > 0 // Costo estimado debe ser un número positivo
-                          );
-      
-      // Validación general del formulario
-      const isFormValid = isInfoValid && areItemsValid;
-
-      // --- Manejador del Botón Principal ---
-      
-      const handleConfirmClick = () => {
-        // Limpiar timeouts y mensajes anteriores
-        if (tooltipTimeout.current) {
-          clearTimeout(tooltipTimeout.current);
-        }
-        setShowTooltip(false);
-        setErrorMsg(null);
-
-
-        if (isFormValid) {
-          // Si todo es válido, abrimos el modal
-          console.log("Formulario válido. Abriendo modal...");
-          setIsModalOpen(true);
-        } else if (isInfoValid && items.length === 0) {
-          // Si la info está bien pero faltan items, mostrar tooltip de "Añadir producto"
-          setShowTooltip(true);
-          tooltipTimeout.current = setTimeout(() => setShowTooltip(false), 3000); // Ocultar después de 3 seg
-        } else {
-          // Lógica de error visible
-          if (!isInfoValid) {
-            showAlert("Por favor, complete la sección de 'Información' (tienda y entrega).");
-          } else if (isInfoValid && items.length > 0 && !areItemsValid) {
-            showAlert("Por favor, complete todos los campos de los productos (descripción, cantidad y costo estimado positivo).");
-          } else if (isInfoValid && !areItemsValid) {
-             // Caso borde: Info válida, lista vacía (ya cubierto por tooltip, pero por si acaso)
-             showAlert("No ha añadido ningún producto a la lista.");
-          } else {
-             showAlert("Revise el formulario, faltan datos requeridos.");
-          }
-        }
-      };
-      
       return (
         <div className="min-h-screen bg-white p-4 sm:p-8 animate-in fade-in duration-300">
           <div className="w-full max-w-4xl mx-auto">
-            
-            {/* Barra de Navegación Superior (Píldoras) */}
             <div className="flex items-center justify-between mb-6">
-              <button
-                onClick={onGoBack}
-                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-              >
-                <ArrowLeft />
-              </button>
-              
+              <button onClick={onGoBack} className="p-2 hover:bg-gray-100 rounded-full"><ArrowLeft /></button>
               <div className="flex gap-2">
-                <button 
-                  onClick={onNavigateToSendReceive}
-                  className="px-5 py-2 bg-gray-200 text-gray-800 rounded-full font-medium text-sm hover:bg-gray-300 transition-colors"
-                >
-                  Enviar/Recoger
-                </button>
-                <button 
-                  onClick={onNavigateToFastPrints}
-                  className="px-5 py-2 bg-gray-200 text-gray-800 rounded-full font-medium text-sm hover:bg-gray-300 transition-colors"
-                >
-                  Impresiones rápidas
-                </button>
-                <button className="px-5 py-2 bg-black text-white rounded-full font-medium text-sm">
-                  Comprar/LLevar
-                </button>
+                <button onClick={onNavigateToSendReceive} className="px-5 py-2 bg-gray-200 text-gray-800 rounded-full font-medium text-sm hover:bg-gray-300">Enviar/Recoger</button>
+                <button onClick={onNavigateToFastPrints} className="px-5 py-2 bg-gray-200 text-gray-800 rounded-full font-medium text-sm hover:bg-gray-300">Impresiones rápidas</button>
+                <button className="px-5 py-2 bg-black text-white rounded-full font-medium text-sm">Comprar/Llevar</button>
               </div>
-              
-              <div className="w-10 h-10"></div>{/* Espaciador */}
+              <div className="w-10 h-10"></div>
             </div>
 
-            {/* Layout de 2 columnas (solo en pantallas grandes) */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
-              {/* Columna Izquierda: Información */}
-              <div className="bg-white rounded-2xl shadow-lg p-6 sm:p-8 space-y-4 h-full">
-                <h2 className="text-3xl font-bold text-gray-800 mb-4">
-                  Información
-                </h2>
-                <input 
-                  type="text" 
-                  placeholder="Nombre de la Tienda / Lugar" 
-                  className="w-full px-4 py-3 bg-gray-100 rounded-lg outline-none focus:ring-2 focus:ring-black"
-                  value={storeName}
-                  onChange={(e) => setStoreName(e.target.value)}
-                />
-                <input 
-                  type="text" 
-                  placeholder="Dirección o Referencia del Lugar" 
-                  className="w-full px-4 py-3 bg-gray-100 rounded-lg outline-none focus:ring-2 focus:ring-black"
-                  value={storeAddress}
-                  onChange={(e) => setStoreAddress(e.target.value)}
-                />
-                <input 
-                  type="text" 
-                  placeholder="Punto de Entrega" 
-                  className="w-full px-4 py-3 bg-gray-100 rounded-lg outline-none focus:ring-2 focus:ring-black"
-                  value={deliveryPoint}
-                  onChange={(e) => setDeliveryPoint(e.target.value)}
-                />
-              </div>
-              
-              {/* Columna Derecha: Mapa */}
-              <div className="bg-white rounded-2xl shadow-lg p-4 flex items-center justify-center min-h-[300px]">
-                <div className="w-full h-full bg-gray-100 rounded-lg flex items-center justify-center">
-                  <div className="text-center text-gray-500">
-                    <MapPin className="w-16 h-16 text-gray-400 mx-auto" />
-                    <p className="font-medium mt-2">Espacio para el mapa</p>
-                  </div>
+              <div className="bg-white rounded-2xl shadow-lg p-6 space-y-4 h-full">
+                <h2 className="text-3xl font-bold text-gray-800 mb-4">Información</h2>
+                <input type="text" placeholder="Nombre de la Tienda" className="w-full px-4 py-3 bg-gray-100 rounded-lg outline-none" value={storeName} onChange={e=>setStoreName(e.target.value)}/>
+                <div className={`transition-all rounded-lg ${activeField === 'store' ? 'ring-2 ring-blue-500' : ''}`}>
+                    <input type="text" placeholder="📍 Dirección Tienda (Toca para mapa)" className="w-full px-4 py-3 bg-gray-100 rounded-lg outline-none border border-transparent focus:bg-white" value={storeAddress} onChange={e=>setStoreAddress(e.target.value)} onFocus={() => setActiveField('store')} />
                 </div>
+                <div className={`transition-all rounded-lg ${activeField === 'delivery' ? 'ring-2 ring-green-500' : ''}`}>
+                    <input type="text" placeholder="🏁 Punto de Entrega (Toca para mapa)" className="w-full px-4 py-3 bg-gray-100 rounded-lg outline-none border border-transparent focus:bg-white" value={deliveryPoint} onChange={e=>setDeliveryPoint(e.target.value)} onFocus={() => setActiveField('delivery')} />
+                </div>
+                <input type="tel" placeholder="Tu Whatsapp" className="w-full px-4 py-3 bg-gray-100 rounded-lg outline-none" value={whatsapp} onChange={e=>setWhatsapp(e.target.value)}/>
+              </div>
+
+              <div className={`bg-white rounded-2xl shadow-lg overflow-hidden relative min-h-[400px] border-4 transition-colors ${activeField === 'store' ? 'border-blue-100' : 'border-green-100'}`}>
+                 {/* AQUÍ ESTÁ LA CLAVE: mapId ÚNICO */}
+                 <MapComponent onLocationSelect={handleMapSelection} mapId="mapa-compras" />
+                 <div className={`absolute bottom-4 right-4 backdrop-blur px-4 py-2 rounded-lg shadow-md text-xs font-bold z-[400] pointer-events-none border transition-colors ${activeField === 'store' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-green-50 text-green-700 border-green-200'}`}>
+                    {activeField === 'store' ? '📍 Seleccionando: TIENDA' : '🏁 Seleccionando: ENTREGA'}
+                 </div>
               </div>
             </div>
 
-            {/* Sección Lista de Compras (ocupa todo el ancho) */}
-            <div className="bg-white rounded-2xl shadow-lg p-6 sm:p-8 space-y-4">
-              <h2 className="text-3xl font-bold text-gray-800 mb-4">
-                Lista de Compras Detallada
-              </h2>
-              
-              {/* Encabezados de la lista (visibles solo si hay items) */}
-              {items.length > 0 && (
-                <div className="hidden md:grid grid-cols-12 gap-4 items-center mb-2 px-2">
-                  <div className="col-span-5"><label className="text-sm font-medium text-gray-600">Descripción del producto</label></div>
-                  <div className="col-span-3"><label className="text-sm font-medium text-gray-600">Cantidad a comprar</label></div>
-                  <div className="col-span-3"><label className="text-sm font-medium text-gray-600">Costo Estimado</label></div>
-                  <div className="col-span-1"></div> {/* Espacio para el basurero */}
-                </div>
-              )}
-
-              {/* Lista de Items Dinámica */}
-              <div className="space-y-4">
-                {items.map(item => (
-                  <div key={item.id} className="grid grid-cols-12 gap-4 items-center">
-                    {/* Descripción */}
-                    <div className="col-span-12 md:col-span-5">
-                      <label className="text-sm font-medium text-gray-600 md:hidden">Descripción</label>
-                      <input 
-                        type="text" 
-                        placeholder="¿Qué deseas comprar?" 
-                        className="w-full px-4 py-3 bg-gray-100 rounded-lg outline-none focus:ring-2 focus:ring-black"
-                        value={item.description}
-                        onChange={(e) => handleItemChange(item.id, 'description', e.target.value)}
-                      />
-                    </div>
-                    
-                    {/* Cantidad */}
-                    <div className="col-span-6 md:col-span-3">
-                      <label className="text-sm font-medium text-gray-600 md:hidden">Cantidad</label>
-                      <div className="flex items-center">
-                        <button 
-                          onClick={() => handleQuantityAdjust(item.id, -1)}
-                          className="p-2 bg-gray-200 rounded-l-lg hover:bg-gray-300"
-                        >
-                          <Minus className="w-5 h-5" />
-                        </button>
-                        <input 
-                          type="number" 
-                          className="w-full text-center px-2 py-3 bg-gray-100 outline-none border-t border-b border-gray-100 focus:ring-2 focus:ring-black [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                          value={item.quantity}
-                          onChange={(e) => handleItemChange(item.id, 'quantity', e.target.value)}
-                          min="1"
-                        />
-                        <button 
-                          onClick={() => handleQuantityAdjust(item.id, 1)}
-                          className="p-2 bg-gray-200 rounded-r-lg hover:bg-gray-300"
-                        >
-                          <Plus className="w-5 h-5" />
-                        </button>
-                      </div>
-                    </div>
-                    
-                    {/* Costo Estimado */}
-                    <div className="col-span-6 md:col-span-3">
-                      
-                      {/* La etiqueta es importante para la accesibilidad en móvil */}
-                      <label className="text-sm font-medium text-gray-600 md:hidden">Costo Estimado</label>
-                      
-                      <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
-                        <input 
-                          type="number" 
-                          placeholder="0.00"
-                          className="w-full pl-7 pr-4 py-3 bg-gray-100 rounded-lg outline-none focus:ring-2 focus:ring-black [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                          value={item.cost}
-                          onChange={(e) => handleItemChange(item.id, 'cost', e.target.value)}
-                          min="0"
-                        />
-                      </div>
-                    </div>
-                    
-                    {/* Botón de Eliminar */}
-                    <div className="col-span-12 md:col-span-1 flex justify-end items-center">
-                      <button onClick={() => handleDeleteItem(item.id)} className="p-2">
-                        <Trash />
-                      </button>
-                    </div>
+            <div className="bg-white rounded-2xl shadow-lg p-6 space-y-4">
+              <h2 className="text-3xl font-bold text-gray-800 mb-4">Lista de Compras</h2>
+              {items.map(item => (
+                  <div key={item.id} className="flex gap-2 items-center">
+                      <input className="w-full p-3 bg-gray-100 rounded" placeholder="Producto" value={item.description} onChange={e=>handleItemChange(item.id, 'description', e.target.value)}/>
+                      <input type="number" className="w-20 p-3 bg-gray-100 rounded text-center" placeholder="#" value={item.quantity} onChange={e=>handleItemChange(item.id, 'quantity', e.target.value)}/>
+                      <input type="number" className="w-24 p-3 bg-gray-100 rounded text-center" placeholder="$ Est." value={item.cost} onChange={e=>handleItemChange(item.id, 'cost', e.target.value)}/>
+                      <button onClick={()=>handleDeleteItem(item.id)} className="p-2 text-red-500"><Trash/></button>
                   </div>
-                ))}
-              </div>
-
-              {/* Botón de Añadir Producto */}
-              <button 
-                onClick={handleAddItem}
-                className="flex items-center gap-2 px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50"
-              >
-                <Plus className="w-5 h-5" />
-                Añadir Producto
-              </button>
-
-              {/* Separador y Total */}
-              <div className="border-t border-gray-200 pt-4 mt-4">
-                <div className="flex justify-end items-center">
-                  <span className="text-lg font-medium text-gray-700">Total estimado:</span>
-                  <span className="text-2xl font-bold text-black w-32 text-right">
-                    ${totalPagar.toFixed(2)}
-                  </span>
-                </div>
-                <p className="text-xs text-gray-500 text-right mt-1">Este es solo el costo estimado de los productos.</p>
-              </div>
+              ))}
+              <button onClick={handleAddItem} className="flex items-center gap-2 px-4 py-2 border-2 border-dashed rounded text-gray-600 hover:bg-gray-50"><Plus className="w-4 h-4"/> Añadir Producto</button>
             </div>
 
-            {/* Sección de Confirmación y Tooltip/Error */}
-            <div className="mt-8 flex justify-end items-center relative">
-              {/* Contenedor para Tooltip (falta producto) y Mensaje de Error (alerta reemplazada) */}
-              <div className="absolute bottom-full right-0 w-full md:w-auto mb-2 flex justify-end">
-                
-                {/* Tooltip (falta producto) */}
-                {showTooltip && (
-                  <div className="px-4 py-2 bg-gray-700 text-white text-sm rounded-lg shadow-lg animate-in fade-in zoom-in-95 mr-2 relative">
-                    Por favor, añade al menos un producto a la lista
-                    {/* Flecha del tooltip */}
-                    <div className="absolute top-full right-10 w-0 h-0 border-x-8 border-x-transparent border-t-8 border-t-gray-700"></div>
-                  </div>
-                )}
-                
-                {/* Mensaje de Error (alerta reemplazada) */}
-                {errorMsg && (
-                  <div className="px-4 py-2 bg-red-600 text-white text-sm rounded-lg shadow-lg animate-in fade-in zoom-in-95 relative">
-                    {errorMsg}
-                    {/* Flecha del tooltip de error */}
-                    <div className="absolute top-full right-10 w-0 h-0 border-x-8 border-x-transparent border-t-8 border-t-red-600"></div>
-                  </div>
-                )}
-              </div>
-              
-              {/* Botón de Confirmar y Pagar */}
-              <button
-                onClick={handleConfirmClick}
-                className={
-                  isFormValid
-                  ? "px-8 py-3 bg-black text-white rounded-lg font-medium hover:bg-gray-800 transition-colors"
-                  : "px-8 py-3 bg-gray-200 text-gray-500 rounded-lg font-medium cursor-not-allowed"
-                }
-              >
-                Confirmar y pagar
-              </button>
+            <div className="mt-8 flex justify-end">
+              <button onClick={() => setIsModalOpen(true)} disabled={!isInfoValid || !areItemsValid} className={`px-8 py-3 rounded-lg font-medium text-white ${isInfoValid && areItemsValid ? 'bg-black hover:bg-gray-800' : 'bg-gray-300 cursor-not-allowed'}`}>Confirmar y Pagar</button>
             </div>
-            
           </div>
-          
-          {isModalOpen && <ConfirmacionModal 
-            onClose={() => setIsModalOpen(false)}
-            servicio="Comprar/LLevar"
-            desde={storeAddress} // Dirección de la tienda
-            hasta={deliveryPoint} // Punto de entrega
-            hora="N/A" // Hora no es relevante aquí
-          />}
-          
+          {isModalOpen && <ConfirmacionModal onClose={() => setIsModalOpen(false)} servicio="Comprar/Llevar" desde={storeName} hasta={deliveryPoint} hora="N/A" onConfirmAction={handleSubmitBuy}/>}
         </div>
       );
     }
-    // ***** FIN DEL NUEVO COMPONENTE *****
 
-
-    // --- Componente: Nueva Página "Programa tu Mandado" (SIMPLIFICADA) ---
     function NewFavorView({ onGoBack, onNavigateToSendReceive, onNavigateToFastPrints, onNavigateToBuyTake }) {
       
       return (
