@@ -48,6 +48,106 @@
     .zoom-in-95 { animation-name: zoomIn95; }
     .slide-in-from-left { animation-name: slideInFromLeft; }
     .slide-in-from-bottom-4 { animation-name: slideInFromBottom4; }
+
+    /* --- TUS ESTILOS PERSONALIZADOS (Adaptados) --- */
+    
+    /* Nota: Cambié 'body' por '.recorrido-view' para no afectar el resto de la app */
+    .recorrido-view {
+        font-family: 'Arial', sans-serif;
+        background-color: #fff;
+        display: flex;
+        justify-content: center;
+        min-height: 100vh;
+        width: 100%; /* Asegura que ocupe el ancho */
+    }
+
+    .tracking-container { /* Renombrado para evitar conflictos con Tailwind */
+        width: 100%;
+        max-width: 800px;
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .recorrido-view h1 {
+        font-size: 32px;
+        font-weight: 900;
+        margin-top: 20px;
+        margin-bottom: 30px;
+        text-align: center;
+        color: #000;
+    }
+
+    .map-container {
+        width: 100%;
+        max-width: 500px;
+        height: 250px;
+        background-color: #eee;
+        margin-bottom: 40px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        border-radius: 4px;
+        overflow: hidden;
+        position: relative; /* Necesario para el mapa interactivo */
+    }
+
+    .info-section {
+        display: flex;
+        justify-content: center;
+        gap: 40px;
+        width: 100%;
+        margin-bottom: 40px;
+        flex-wrap: wrap; /* Para que baje en movil */
+    }
+
+    .card-custom { /* Renombrado para evitar conflictos */
+        border: 1px solid #ccc;
+        padding: 20px 30px;
+        width: 100%;
+        max-width: 300px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    }
+
+    .card-custom h2 {
+        text-align: center;
+        font-size: 20px;
+        font-weight: bold;
+        margin-top: 0;
+        margin-bottom: 25px;
+        color: #000;
+    }
+
+    .card-custom p {
+        font-size: 16px;
+        font-weight: bold;
+        margin: 15px 0;
+        color: #000;
+    }
+
+    .btn-delivered {
+        background-color: #2c2c2c;
+        color: white;
+        border: none;
+        padding: 15px 30px;
+        font-size: 16px;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: background 0.3s;
+    }
+
+    .btn-delivered:hover {
+        background-color: #000;
+    }
+    
+    /* Botón flotante para volver atrás (Agregado extra para navegación) */
+    .btn-back-float {
+        position: absolute;
+        top: 20px;
+        left: 20px;
+        cursor: pointer;
+    }
   </style>
 </head>
 <body>
@@ -371,7 +471,8 @@
            try {
               if (!localStorage.getItem('accessToken')) { alert("Debes iniciar sesión."); return; }
               
-              await apiCall('/pedido/crear/', 'POST', {
+              // 1. CREAMOS EL PEDIDO
+              const nuevoPedido = await apiCall('/pedido/crear/', 'POST', {
                   num_whats: whatsapp, 
                   descripcion: `${descripcion} (De: ${recogida} -> A: ${entrega})`,
                   punto_origen_id: 1, punto_desitno_id: 1,
@@ -379,8 +480,29 @@
                   fechaInicial: new Date().toISOString(),
                   costoEnvio: 3.75, estado: "Publicado"
               });
-              alert("✅ Pedido creado exitosamente!");
-              onGoBack();
+
+              alert("✅ Pedido creado. La simulación iniciará en breve...");
+              onGoBack(); // Volvemos al home
+
+              // 2. FASE 1: ACEPTACIÓN (A los 5 segundos)
+              setTimeout(async () => {
+                  try {
+                      console.log("🤖 Fase 1: El bot está aceptando...");
+                      await apiCall(`/pedido/simular-aceptacion/${nuevoPedido.codigoPedido}/`, 'POST');
+                      
+                      // 3. FASE 2: ENTREGA FINAL (A los 20 segundos totales, es decir, 15 seg después de aceptar)
+                      setTimeout(async () => {
+                          console.log("📦 Fase 2: El bot está entregando...");
+                          await apiCall(`/pedido/simular-entrega/${nuevoPedido.codigoPedido}/`, 'POST');
+                          console.log("✅ ¡Pedido finalizado!");
+                          alert("🏁 Tu pedido ha sido ENTREGADO por el repartidor.");
+                      }, 15000); // 15 segundos extra
+
+                  } catch (e) {
+                      console.error("Error en simulación:", e);
+                  }
+              }, 5000); // 5 segundos iniciales
+
           } catch (error) { alert("Error: " + error.message); }
       };
 
@@ -1169,6 +1291,245 @@
       );
     }
     // --- FIN Componente: Nueva Vista "Subir Foto de Perfil" ---
+    function ActiveOrderView({ orderId, userRole, onGoBack }) {
+        const [order, setOrder] = useState(null);
+
+        // 1. Lógica para traer datos del backend
+        useEffect(() => {
+            const fetchDetail = async () => {
+                try {
+                    const data = await apiCall(`/pedido/detalle/${orderId}/`);
+                    setOrder(data);
+                } catch (e) { console.error(e); }
+            };
+            fetchDetail();
+            const interval = setInterval(fetchDetail, 5000); // Actualizar cada 5 seg
+            return () => clearInterval(interval);
+        }, [orderId]);
+
+        // 2. Lógica para completar el pedido (Solo repartidor)
+        const handleComplete = async () => {
+            if (!confirm("¿Confirmas la entrega?")) return;
+            try {
+                await apiCall(`/pedido/actualizar/${orderId}/`, 'PATCH', { estado: 'Entregado' });
+                alert("¡Pedido entregado!");
+                onGoBack();
+            } catch (e) { alert(e.message); }
+        };
+
+        if (!order) return <div className="p-10 text-center">Cargando información del pedido...</div>;
+
+        const isDriver = userRole === 'repartidor';
+
+        return (
+            <div className="recorrido-view relative">
+                {/* Botón Volver (Agregado para no quedar atrapado) */}
+                <div className="btn-back-float" onClick={onGoBack}>
+                    <ArrowLeft />
+                </div>
+
+                <div className="tracking-container">
+                    {/* Título Dinámico */}
+                    <h1>Recorrido del pedido: #{order.codigoPedido}</h1>
+
+                    {/* Contenedor del Mapa (Reemplazamos la imagen por el componente real) */}
+                    <div className="map-container">
+                        <MapComponent mapId="active-map" />
+                    </div>
+
+                    {/* Sección de Tarjetas */}
+                    <div className="info-section">
+                        
+                        {/* Tarjeta Recogida */}
+                        <div className="card-custom">
+                            <h2>Recogida</h2>
+                            {/* Usamos datos reales del pedido */}
+                            <p>Estado: <span className="text-blue-600">{order.estado}</span></p>
+                            <br /> 
+                            <p>Desde: {order.punto_origen_id} (FCI)</p> {/* Aquí deberías mapear el ID a nombre real si puedes */}
+                            <p>Cliente: {order.cliente_nombre}</p>
+                        </div>
+
+                        {/* Tarjeta Entrega */}
+                        <div className="card-custom">
+                            <h2>Entrega</h2>
+                            <p>Hora deseada: {order.horaDeseada ? order.horaDeseada.split('T')[1]?.slice(0,5) : '--:--'}</p>
+                            <br /> 
+                            <p>Hasta: {order.punto_destino_id} (Rectorado)</p>
+                            <p>Costo: ${order.costoEnvio}</p>
+                        </div>
+                    </div>
+
+                    {/* Botón de Acción (Solo visible si eres Repartidor y el pedido no ha terminado) */}
+                    <div className="btn-container">
+                        {isDriver && order.estado !== 'Entregado' ? (
+                            <button className="btn-delivered" onClick={handleComplete}>
+                                Confirmar Pedido Entregado
+                            </button>
+                        ) : (
+                            <div className="text-center font-bold text-gray-500">
+                                {order.estado === 'Entregado' ? "✅ Pedido Finalizado" : "🚗 Pedido en curso..."}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+// --- Componente: Lista de Pedidos Disponibles (Feed) ---
+    function DriverFeedView({ onGoBack, onNavigateToActiveOrder }) {
+      const [orders, setOrders] = useState([]);
+      const [loading, setLoading] = useState(true);
+
+      useEffect(() => {
+        fetchOrders();
+      }, []);
+
+      const fetchOrders = async () => {
+        try {
+          const data = await apiCall('/pedido/listar/');
+          // Filtramos solo los 'Publicado'
+          const disponibles = data.filter(o => o.estado === 'Publicado');
+          setOrders(disponibles);
+        } catch (error) {
+          console.error(error);
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      const handleAccept = async (orderId) => {
+        try {
+          // 👇 CORRECCIÓN: Llamamos a la URL exacta que definimos en el Paso 1
+          await apiCall(`/pedido/aceptar/${orderId}/`, 'PATCH'); 
+          
+          alert("¡Pedido aceptado! Redirigiendo al mapa...");
+          
+          // Esto activa tu diseño
+          onNavigateToActiveOrder(orderId); 
+        } catch (error) {
+          alert("Error: " + error.message);
+          fetchOrders(); 
+        }
+      };
+
+      return (
+        <div className="min-h-screen bg-gray-50 p-4 animate-in fade-in">
+          <header className="flex items-center mb-6">
+            <button onClick={onGoBack} className="p-2 mr-4 bg-white rounded-full shadow"><ArrowLeft /></button>
+            <h1 className="text-2xl font-bold text-gray-800">Pedidos Disponibles</h1>
+          </header>
+
+          {loading ? <p className="text-center py-10">Cargando...</p> : (
+            <div className="space-y-4 max-w-2xl mx-auto">
+                {orders.length === 0 && <p className="text-center text-gray-500">No hay pedidos disponibles.</p>}
+                {orders.map(order => (
+                    <div key={order.codigoPedido} className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                        <div className="flex justify-between mb-2">
+                            <h3 className="font-bold text-lg">Pedido #{order.codigoPedido}</h3>
+                            <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full font-bold">${order.costoEnvio}</span>
+                        </div>
+                        <p className="text-gray-600 mb-4">{order.descripcion}</p>
+                        <button 
+                            onClick={() => handleAccept(order.codigoPedido)}
+                            className="w-full bg-black text-white py-3 rounded-lg font-bold hover:bg-gray-800"
+                        >
+                            Aceptar Pedido
+                        </button>
+                    </div>
+                ))}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // --- Componente: Mis Pedidos (Historial del Cliente) ---
+    function MyOrdersView({ onGoBack, onNavigateToActiveOrder, currentUserId }) {
+      const [orders, setOrders] = useState([]);
+      const [loading, setLoading] = useState(true);
+
+      useEffect(() => {
+        fetchMyOrders();
+      }, []);
+
+      const fetchMyOrders = async () => {
+        try {
+          const data = await apiCall('/pedido/listar/');
+          // Filtramos solo los pedidos donde YO soy el cliente
+          const misPedidos = data.filter(o => o.idCliente === currentUserId);
+          // Ordenamos para ver los más recientes primero
+          setOrders(misPedidos.reverse());
+        } catch (error) {
+          console.error(error);
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      const getStatusColor = (estado) => {
+          switch(estado) {
+              case 'Publicado': return 'bg-gray-100 text-gray-600';
+              case 'Aceptado': return 'bg-blue-100 text-blue-700';
+              case 'Entregado': return 'bg-green-100 text-green-700';
+              default: return 'bg-gray-100';
+          }
+      };
+
+      return (
+        <div className="min-h-screen bg-gray-50 p-4 animate-in fade-in">
+          <header className="flex items-center mb-6">
+            <button onClick={onGoBack} className="p-2 mr-4 bg-white rounded-full shadow"><ArrowLeft /></button>
+            <h1 className="text-2xl font-bold text-gray-800">Mis Pedidos</h1>
+          </header>
+
+          {loading ? <p className="text-center py-10">Cargando historial...</p> : (
+            <div className="space-y-4 max-w-2xl mx-auto">
+                {orders.length === 0 && (
+                    <div className="text-center py-10 text-gray-500 bg-white rounded-xl shadow-sm">
+                        <p className="mb-2">No has realizado pedidos aún.</p>
+                    </div>
+                )}
+                
+                {orders.map(order => (
+                    <div 
+                        key={order.codigoPedido} 
+                        // Si está aceptado, permitimos clic para ver el mapa
+                        onClick={() => {
+                            if (order.estado === 'Aceptado' || order.estado === 'Entregado') {
+                                onNavigateToActiveOrder(order.codigoPedido);
+                            }
+                        }}
+                        className={`bg-white p-5 rounded-xl shadow-sm border border-gray-100 transition-all ${order.estado === 'Aceptado' ? 'cursor-pointer hover:shadow-md ring-1 ring-blue-200' : ''}`}
+                    >
+                        <div className="flex justify-between items-start mb-2">
+                            <div>
+                                <span className={`text-xs px-2 py-1 rounded-full font-bold uppercase tracking-wider ${getStatusColor(order.estado)}`}>
+                                    {order.estado}
+                                </span>
+                                <span className="text-gray-400 text-xs ml-2">#{order.codigoPedido}</span>
+                            </div>
+                            <span className="font-bold text-gray-900">${order.costoEnvio}</span>
+                        </div>
+                        
+                        <h3 className="font-semibold text-gray-800 mb-1">{order.descripcion}</h3>
+                        
+                        <div className="text-sm text-gray-500 mt-3 flex justify-between items-end">
+                            <span>📅 {new Date(order.fechaInicial).toLocaleDateString()}</span>
+                            {order.estado === 'Aceptado' && (
+                                <span className="text-blue-600 font-medium text-xs flex items-center gap-1">
+                                    Ver mapa <ChevronRight />
+                                </span>
+                            )}
+                        </div>
+                    </div>
+                ))}
+            </div>
+          )}
+        </div>
+      );
+    }
 
 
     // --- Componente: Página Principal ---
@@ -1179,6 +1540,36 @@
       const [isLoggedIn, setIsLoggedIn] = useState(false);
       const [currentUser, setCurrentUser] = useState(null);
       const [showUserMenu, setShowUserMenu] = useState(false); 
+      const [activeOrderId, setActiveOrderId] = useState(null);
+
+      const [ignoredOrderId, setIgnoredOrderId] = useState(null);
+      useEffect(() => {
+        const checkStatus = async () => {
+            if (!currentUser || !isLoggedIn) return;
+            if (currentView === 'activeOrder') return;
+
+            try {
+                const data = await apiCall('/pedido/listar/');
+                const pedidoAceptado = data.find(p => 
+                    (p.estado === 'Aceptado' || p.estado === 'Entregado') && 
+                    currentUser && p.idCliente === currentUser.id
+                );
+
+                // 👇 MODIFICAMOS ESTA CONDICIÓN 👇
+                // Solo entramos si existe el pedido Y NO es el que acabamos de cerrar
+                if (pedidoAceptado && pedidoAceptado.codigoPedido !== ignoredOrderId) {
+                    console.log("¡Pedido detectado!", pedidoAceptado);
+                    setActiveOrderId(pedidoAceptado.codigoPedido);
+                    setCurrentView("activeOrder");
+                }
+            } catch (error) {
+                if (error.message !== "Sesión expirada") console.error(error);
+            }
+        };
+
+        const interval = setInterval(checkStatus, 3000);
+        return () => clearInterval(interval);
+    }, [currentView, currentUser, isLoggedIn, ignoredOrderId]); // 👈 Agregamos ignoredOrderId aquí
 
   // ... Estados Form Auth (NUEVOS) ...
 // Estados Form Auth (NUEVOS)
@@ -1476,6 +1867,39 @@
         return renderHelpView();
       }
 
+      if (currentView === "activeOrder") {
+         return <ActiveOrderView 
+            orderId={activeOrderId}
+            userRole={currentUser?.rol} 
+            // 👇 CAMBIA ESTA FUNCIÓN 👇
+            onGoBack={() => {
+                setIgnoredOrderId(activeOrderId); // "Ya vi este pedido, no me vuelvas a traer aquí"
+                setCurrentView("home");
+            }}
+         />;
+        }
+
+      if (currentView === "driverFeed") {
+        return <DriverFeedView 
+            onGoBack={() => setCurrentView("home")}
+            onNavigateToActiveOrder={(id) => { 
+                setActiveOrderId(id); 
+                setCurrentView("activeOrder"); // Esto lleva a TU DISEÑO
+            }}
+        />;
+      }
+
+      if (currentView === "myOrders") {
+         return <MyOrdersView 
+            onGoBack={() => setCurrentView("home")}
+            currentUserId={currentUser?.id}
+            onNavigateToActiveOrder={(id) => { 
+                setActiveOrderId(id); 
+                setCurrentView("activeOrder"); // Te lleva a TU DISEÑO
+            }}
+         />;
+      }
+
       // --- Vista "home" (Página Principal) ---
       return (
         <div className="min-h-screen bg-gray-50">
@@ -1603,7 +2027,17 @@
               <div className="absolute top-16 left-0 w-64 bg-white shadow-lg border-t animate-in slide-in-from-left z-50">
                 <nav className="py-2">
                   <a href="#" onClick={(e) => { e.preventDefault(); setCurrentView("home"); setMenuOpen(false); }} className="block px-4 py-3 text-gray-700 hover:bg-gray-100 transition-colors">Inicio</a>
-                  <a href="#" className="block px-4 py-3 text-gray-700 hover:bg-gray-100 transition-colors">Mis pedidos</a>
+                  <a 
+  href="#" 
+  onClick={(e) => { 
+      e.preventDefault(); 
+      setCurrentView("myOrders"); // <--- Aquí activamos la nueva vista
+      setMenuOpen(false); 
+  }} 
+  className="block px-4 py-3 text-gray-700 hover:bg-gray-100 transition-colors"
+>
+  Mis pedidos
+</a>
                   <a href="#" onClick={(e) => { e.preventDefault(); setCurrentView("driverRegister"); setMenuOpen(false); }} className="block px-4 py-3 text-gray-700 hover:bg-gray-100 transition-colors">Ser repartidor</a>
                   <a href="#" onClick={(e) => { e.preventDefault(); setCurrentView("help"); setMenuOpen(false); }} className="block px-4 py-3 text-gray-700 hover:bg-gray-100 transition-colors">Ayuda</a>
                 </nav>
@@ -1704,6 +2138,18 @@
               </div>
               
             </div>
+            {isLoggedIn && currentUser?.rol === 'repartidor' && (
+                <div className="mt-8 bg-black rounded-xl p-8 text-white text-center shadow-xl animate-in slide-in-from-bottom-4">
+                    <h2 className="text-2xl font-bold mb-2">🚗 Modo Repartidor</h2>
+                    <p className="mb-6 opacity-90">Tienes {currentUser.nombre}, revisa los pedidos disponibles.</p>
+                    <button 
+                        onClick={() => setCurrentView("driverFeed")}
+                        className="bg-white text-black px-8 py-3 rounded-full font-bold hover:bg-gray-200 transition-colors"
+                    >
+                        Ver Pedidos Disponibles
+                    </button>
+                </div>
+            )}
           </main>
         </div>
       );

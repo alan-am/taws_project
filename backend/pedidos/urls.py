@@ -40,4 +40,7 @@ urlpatterns = [
         PedidoViewSet.as_view({'delete': 'destroy'}),
         name='pedido-eliminar'
     ),
+    path('api/pedido/aceptar/<int:pk>/', PedidoViewSet.as_view({'patch': 'aceptar_pedido'}), name='pedido-aceptar'),
+    path('api/pedido/simular-aceptacion/<int:pk>/', PedidoViewSet.as_view({'post': 'simular_aceptacion'}), name='simular-aceptacion'),
+    path('api/pedido/simular-entrega/<int:pk>/', PedidoViewSet.as_view({'post': 'simular_entrega'}), name='simular-entrega'),
 ]
