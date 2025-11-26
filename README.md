@@ -31,7 +31,7 @@ Asegúrate de tener instalado:
 
 1.  **Clonar el repositorio:**
     ```bash
-    git clone -b feature/integracion-fullstack [https://github.com/alan-am/taws_project.git](https://github.com/alan-am/taws_project.git)
+    git clone -b feature/integracion-fullstack https://github.com/alan-am/taws_project.git
     cd taws_project/backend
     ```
 
@@ -40,7 +40,7 @@ Asegúrate de tener instalado:
     python -m venv venv
     ```
 
-3.  **Activar entorno virtual:**
+3.  **Activar entorno virtual: DENTRO DE LA CARPETA BACKEND cd Backend**
     * **Windows:** `.\venv\Scripts\activate`
     * **Mac/Linux:** `source venv/bin/activate`
     * *⚠️ Nota: Si tienes errores de seguridad en Windows, ver la sección "Solución de Problemas" abajo.*

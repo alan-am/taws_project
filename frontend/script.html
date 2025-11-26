@@ -337,9 +337,10 @@
 
       return <div id={mapId || 'default-map'} className="w-full h-full z-0"></div>;
     }
-// --- Componente: Impresiones Rápidas (CONECTADO) ---
-
+// --- Componente: Nueva Página "Enviar/Recoger" (CORREGIDA CON MENÚ) ---
     function SendReceiveView({ onGoBack, onNavigateToFastPrints, onNavigateToBuyTake }) {
+      
+      // --- Estado del Formulario ---
       const [isModalOpen, setIsModalOpen] = useState(false);
       const [fecha, setFecha] = useState("");
       const [recogida, setRecogida] = useState("");
@@ -347,27 +348,38 @@
       const [hora, setHora] = useState("");
       const [descripcion, setDescripcion] = useState("");
       const [whatsapp, setWhatsapp] = useState("");
-      const [activeField, setActiveField] = useState("recogida"); 
+      
+      // --- Estado para el Mapa ---
+      const [activeField, setActiveField] = useState("recogida");
 
-      const isFormValid = fecha && recogida && entrega && hora && descripcion && whatsapp;
+      // --- Lógica de Validación ---
+      const isFormValid = fecha.trim() !== "" && 
+                          recogida.trim() !== "" && 
+                          entrega.trim() !== "" && 
+                          hora.trim() !== "" && 
+                          descripcion.trim() !== "" && 
+                          whatsapp.trim() !== "";
 
+      // Lógica del mapa
       const handleMapSelection = (coordTexto) => {
           if (activeField === "recogida") setRecogida(coordTexto);
           else setEntrega(coordTexto);
       };
 
-      const handleSubmitOrder = async () => {
-          try {
+      // Enviar al backend
+      const handleSubmit = async () => {
+           try {
               if (!localStorage.getItem('accessToken')) { alert("Debes iniciar sesión."); return; }
-              const payload = {
-                  num_whats: whatsapp,
-                  descripcion: `${descripcion} (De: ${recogida} -> A: ${entrega})`, 
-                  punto_origen_id: 1, punto_desitno_id: 1, 
-                  horaDeseada: new Date().toISOString(), fechaInicial: new Date().toISOString(),
+              
+              await apiCall('/pedido/crear/', 'POST', {
+                  num_whats: whatsapp, 
+                  descripcion: `${descripcion} (De: ${recogida} -> A: ${entrega})`,
+                  punto_origen_id: 1, punto_desitno_id: 1,
+                  horaDeseada: new Date().toISOString(),
+                  fechaInicial: new Date().toISOString(),
                   costoEnvio: 3.75, estado: "Publicado"
-              };
-              await apiCall('/pedido/crear/', 'POST', payload);
-              alert("✅ ¡Pedido creado exitosamente!");
+              });
+              alert("✅ Pedido creado exitosamente!");
               onGoBack();
           } catch (error) { alert("Error: " + error.message); }
       };
@@ -375,78 +387,189 @@
       return (
         <div className="min-h-screen bg-white p-4 sm:p-8 animate-in fade-in duration-300">
           <div className="w-full max-w-6xl mx-auto">
+            
+            {/* Barra de Navegación Superior (AQUÍ ESTABA EL PROBLEMA) */}
             <div className="flex items-center justify-between mb-6">
-              <button onClick={onGoBack} className="p-2 hover:bg-gray-100 rounded-full"><ArrowLeft /></button>
+              <button
+                onClick={onGoBack}
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              >
+                <ArrowLeft />
+              </button>
+              
               <div className="flex gap-2">
-                <button className="px-5 py-2 bg-black text-white rounded-full font-medium text-sm">Enviar/Recoger</button>
+                {/* Botón Activo */}
+                <button className="px-5 py-2 bg-black text-white rounded-full font-medium text-sm">
+                  Enviar/Recoger
+                </button>
+                
+                {/* Botones de Navegación a las otras vistas */}
+                <button 
+                  onClick={onNavigateToFastPrints}
+                  className="px-5 py-2 bg-gray-200 text-gray-800 rounded-full font-medium text-sm hover:bg-gray-300 transition-colors"
+                >
+                  Impresiones rápidas
+                </button>
+                <button 
+                  onClick={onNavigateToBuyTake}
+                  className="px-5 py-2 bg-gray-200 text-gray-800 rounded-full font-medium text-sm hover:bg-gray-300 transition-colors"
+                >
+                  Comprar/LLevar
+                </button>
               </div>
-              <div className="w-10 h-10"></div>
+              
+              <div className="w-10 h-10"></div>{/* Espaciador */}
             </div>
 
+            {/* Layout de 2 columnas */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              
+              {/* Columna Izquierda (Formulario "Información") */}
               <div className="bg-white rounded-2xl shadow-lg p-6 sm:p-8 space-y-4">
-                <h2 className="text-3xl font-bold text-gray-800 mb-4">Información</h2>
-                <input type="text" placeholder="Fecha" onFocus={(e)=>e.target.type='date'} onBlur={(e)=>e.target.type='text'} className="w-full px-4 py-3 bg-gray-100 rounded-lg outline-none focus:ring-2 focus:ring-black" value={fecha} onChange={(e)=>setFecha(e.target.value)}/>
+                <h2 className="text-3xl font-bold text-gray-800 mb-4">
+                  Información
+                </h2>
                 
+                <input 
+                  type="text" 
+                  placeholder="Fecha" 
+                  onFocus={(e) => (e.target.type = "date")}
+                  onBlur={(e) => (e.target.type = "text")}
+                  className="w-full px-4 py-3 bg-gray-100 rounded-lg outline-none focus:ring-2 focus:ring-black"
+                  value={fecha}
+                  onChange={(e) => setFecha(e.target.value)}
+                />
+                
+                {/* Input Recogida con foco */}
                 <div className={`transition-all rounded-lg ${activeField === 'recogida' ? 'ring-2 ring-blue-500' : ''}`}>
-                    <input type="text" placeholder="📍 Punto de Recogida (Toca aquí)" className="w-full px-4 py-3 bg-gray-100 rounded-lg outline-none border border-transparent focus:bg-white" value={recogida} onChange={(e)=>setRecogida(e.target.value)} onFocus={() => setActiveField('recogida')} />
+                    <input 
+                      type="text" 
+                      placeholder="📍 Punto de Recogida (Toca aquí)" 
+                      className="w-full px-4 py-3 bg-gray-100 rounded-lg outline-none border border-transparent focus:bg-white"
+                      value={recogida}
+                      onChange={(e) => setRecogida(e.target.value)}
+                      onFocus={() => setActiveField('recogida')}
+                    />
                 </div>
+
+                {/* Input Entrega con foco */}
                 <div className={`transition-all rounded-lg ${activeField === 'entrega' ? 'ring-2 ring-green-500' : ''}`}>
-                    <input type="text" placeholder="🏁 Punto de Entrega (Toca aquí)" className="w-full px-4 py-3 bg-gray-100 rounded-lg outline-none border border-transparent focus:bg-white" value={entrega} onChange={(e)=>setEntrega(e.target.value)} onFocus={() => setActiveField('entrega')} />
+                    <input 
+                      type="text" 
+                      placeholder="🏁 Punto de Entrega (Toca aquí)" 
+                      className="w-full px-4 py-3 bg-gray-100 rounded-lg outline-none border border-transparent focus:bg-white"
+                      value={entrega}
+                      onChange={(e) => setEntrega(e.target.value)}
+                      onFocus={() => setActiveField('entrega')}
+                    />
                 </div>
 
-                <input type="text" placeholder="Hora de Entrega" onFocus={(e)=>e.target.type='time'} onBlur={(e)=>e.target.type='text'} className="w-full px-4 py-3 bg-gray-100 rounded-lg outline-none focus:ring-2 focus:ring-black" value={hora} onChange={(e)=>setHora(e.target.value)}/>
-                <textarea placeholder="Descripción" rows="4" className="w-full px-4 py-3 bg-gray-100 rounded-lg outline-none focus:ring-2 focus:ring-black" value={descripcion} onChange={(e)=>setDescripcion(e.target.value)}></textarea>
-                <input type="tel" placeholder="Whatsapp" className="w-full px-4 py-3 bg-gray-100 rounded-lg outline-none focus:ring-2 focus:ring-black" value={whatsapp} onChange={(e)=>setWhatsapp(e.target.value)}/>
-                <button onClick={() => setIsModalOpen(true)} disabled={!isFormValid} className={`w-full py-3 rounded-lg font-medium text-white mt-2 transition-colors ${isFormValid ? 'bg-black hover:bg-gray-800' : 'bg-gray-300 cursor-not-allowed'}`}>Confirmar</button>
+                <input 
+                  type="text" 
+                  placeholder="Hora de Entrega Deseada" 
+                  onFocus={(e) => (e.target.type = "time")}
+                  onBlur={(e) => (e.target.type = "text")}
+                  className="w-full px-4 py-3 bg-gray-100 rounded-lg outline-none focus:ring-2 focus:ring-black"
+                  value={hora}
+                  onChange={(e) => setHora(e.target.value)}
+                />
+                <textarea 
+                  placeholder="Descripción ¿Qué se transporta?" 
+                  rows="4"
+                  className="w-full px-4 py-3 bg-gray-100 rounded-lg outline-none focus:ring-2 focus:ring-black"
+                  value={descripcion}
+                  onChange={(e) => setDescripcion(e.target.value)}
+                ></textarea>
+                <input 
+                  type="tel" 
+                  placeholder="Numero de Whatsapp" 
+                  className="w-full px-4 py-3 bg-gray-100 rounded-lg outline-none focus:ring-2 focus:ring-black"
+                  value={whatsapp}
+                  onChange={(e) => setWhatsapp(e.target.value)}
+                />
+                
+                <button 
+                  onClick={() => setIsModalOpen(true)}
+                  disabled={!isFormValid} 
+                  className={
+                    isFormValid
+                      ? "w-full bg-black text-white py-3 rounded-lg font-medium hover:bg-gray-800 transition-colors mt-2"
+                      : "w-full bg-gray-200 text-gray-500 py-3 rounded-lg font-medium cursor-not-allowed mt-2"
+                  }
+                >
+                  Confirmar
+                </button>
               </div>
-
+              
+              {/* Columna Derecha (Mapa) */}
               <div className={`bg-white rounded-2xl shadow-lg overflow-hidden relative min-h-[400px] border-4 transition-colors ${activeField === 'recogida' ? 'border-blue-100' : 'border-green-100'}`}>
-                 {/* AQUÍ ESTÁ LA CLAVE: mapId ÚNICO */}
                  <MapComponent onLocationSelect={handleMapSelection} mapId="mapa-envios" />
                  <div className={`absolute bottom-4 right-4 backdrop-blur px-4 py-2 rounded-lg shadow-md text-xs font-bold z-[400] pointer-events-none border transition-colors ${activeField === 'recogida' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-green-50 text-green-700 border-green-200'}`}>
                     {activeField === 'recogida' ? '📍 Seleccionando: RECOGIDA' : '🏁 Seleccionando: ENTREGA'}
                  </div>
               </div>
+
             </div>
           </div>
-          {isModalOpen && <ConfirmacionModal onClose={() => setIsModalOpen(false)} servicio="Enviar/Recoger" desde={recogida} hasta={entrega} hora={hora} onConfirmAction={handleSubmitOrder}/>}
+          
+          {isModalOpen && <ConfirmacionModal 
+            onClose={() => setIsModalOpen(false)}
+            servicio="Enviar/Recoger"
+            desde={recogida}
+            hasta={entrega}
+            hora={hora}
+            onConfirmAction={handleSubmit}
+          />}
+          
         </div>
       );
     }
 
-
-// --- Componente: Impresiones Rápidas (CON MAPA) ---
+//
+// --- Componente: Nueva Página "Impresiones Rápidas" (CORREGIDA) ---
     function FastPrintsView({ onGoBack, onNavigateToSendReceive, onNavigateToBuyTake }) {
       const [isModalOpen, setIsModalOpen] = useState(false);
       
-      // Estados Información
+      // --- Estado para el formulario de Información ---
       const [fecha, setFecha] = useState("");
       const [recogida, setRecogida] = useState("");
+      const [entrega, setEntrega] = useState(""); // NUEVO: Punto de entrega
       const [hora, setHora] = useState("");
       
-      // Estados Configuración
-      const [pages, setPages] = useState("Todas");
+      // --- Estado para el Mapa (Saber qué campo se está llenando) ---
+      const [activeField, setActiveField] = useState("recogida"); 
+
+      // --- Lógica de Validación ---
+      const isInfoValid = fecha.trim() !== "" && recogida.trim() !== "" && entrega.trim() !== "" && hora.trim() !== "";
+      
+      // (Estado y lógica del formulario de Configuración se mantienen igual...)
+      const [pages, setPages] = useState("");
       const [copies, setCopies] = useState("1");
       const [color, setColor] = useState("Color");
-      const [paperSize, setPaperSize] = useState("A4");
       const [fileName, setFileName] = useState(null);
       const fileInputRef = useRef(null);
       const [openDropdown, setOpenDropdown] = useState(null);
       
-      const isInfoValid = fecha && recogida && hora && fileName;
-
       const handleUploadClick = () => fileInputRef.current.click();
-      const handleFileSelect = (e) => { if(e.target.files[0]) setFileName(e.target.files[0].name); };
-      
+      const handleFileSelect = (event) => { if(event.target.files[0]) setFileName(event.target.files[0].name); };
+      const toggleDropdown = (name) => setOpenDropdown(openDropdown === name ? null : name);
+      const handleSelect = (setter) => (val) => { setter(val); setOpenDropdown(null); };
+
+      // --- Lógica del Mapa ---
+      const handleMapSelection = (coordTexto) => {
+          if (activeField === "recogida") setRecogida(coordTexto);
+          else setEntrega(coordTexto);
+      };
+
+      // --- Enviar al Backend ---
       const handleSubmitPrint = async () => {
           try {
               if (!localStorage.getItem('accessToken')) { alert("Debes iniciar sesión."); return; }
-
-              const descripcion = `IMPRESIÓN: ${fileName} (${copies} copias, ${color}, ${paperSize}) - Retirar en: ${recogida}`;
+              // Descripción detallada para el repartidor
+              const descripcion = `IMPRESIÓN: ${fileName || 'Sin archivo'} (${copies} copias, ${color}) \nRECOGER EN: ${recogida} \nENTREGAR EN: ${entrega}`;
               
               await apiCall('/pedido/crear/', 'POST', {
-                  num_whats: "0999999999",
+                  num_whats: "0999999999", // Podrías agregar campo de whatsapp si falta
                   descripcion,
                   punto_origen_id: 1, punto_desitno_id: 1,
                   horaDeseada: new Date().toISOString(),
@@ -458,38 +581,45 @@
           } catch (error) { alert("Error: " + error.message); }
       };
 
-      const toggleDropdown = (name) => setOpenDropdown(openDropdown === name ? null : name);
-      const handleSelect = (setter) => (val) => { setter(val); setOpenDropdown(null); };
-
       return (
         <div className="min-h-screen bg-gray-50 p-4 sm:p-8 animate-in fade-in duration-300">
-          <div className="w-full max-w-4xl mx-auto">
+          <div className="w-full max-w-6xl mx-auto">
+            {/* Header */}
             <div className="flex items-center justify-between mb-6">
-              <button onClick={onGoBack} className="p-2 hover:bg-gray-100 rounded-full"><ArrowLeft /></button>
+              <button onClick={onGoBack} className="p-2 hover:bg-gray-100 rounded-full transition-colors"><ArrowLeft /></button>
               <div className="flex gap-2">
-                <button onClick={onNavigateToSendReceive} className="px-5 py-2 bg-gray-200 text-gray-800 rounded-full font-medium text-sm hover:bg-gray-300">Enviar/Recoger</button>
+                <button onClick={onNavigateToSendReceive} className="px-5 py-2 bg-gray-200 text-gray-800 rounded-full font-medium text-sm hover:bg-gray-300 transition-colors">Enviar/Recoger</button>
                 <button className="px-5 py-2 bg-black text-white rounded-full font-medium text-sm">Impresiones rápidas</button>
-                <button onClick={onNavigateToBuyTake} className="px-5 py-2 bg-gray-200 text-gray-800 rounded-full font-medium text-sm hover:bg-gray-300">Comprar/Llevar</button>
+                <button onClick={onNavigateToBuyTake} className="px-5 py-2 bg-gray-200 text-gray-800 rounded-full font-medium text-sm hover:bg-gray-300 transition-colors">Comprar/LLevar</button>
               </div>
               <div className="w-10 h-10"></div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Columna 1: Formularios */}
               <div className="flex flex-col gap-6">
-                {/* Formulario */}
                 <div className="bg-white rounded-2xl shadow-2xl p-6">
                   <h2 className="text-3xl font-bold text-gray-800 mb-6">Información</h2>
                   <div className="space-y-4">
                     <input type="text" placeholder="Fecha" onFocus={(e)=>e.target.type='date'} onBlur={(e)=>e.target.type='text'} className="w-full px-4 py-3 bg-gray-100 rounded-lg outline-none" value={fecha} onChange={(e)=>setFecha(e.target.value)}/>
                     
-                    {/* Input conectado al mapa */}
-                    <input type="text" placeholder="📍 Punto de Recogida (Usa el mapa)" className="w-full px-4 py-3 bg-gray-100 rounded-lg outline-none border-2 focus:border-blue-500" value={recogida} onChange={(e)=>setRecogida(e.target.value)}/>
+                    {/* INPUT RECOGIDA CON FOCO ACTIVO */}
+                    <div className={`transition-all rounded-lg ${activeField === 'recogida' ? 'ring-2 ring-blue-500' : ''}`}>
+                        <input type="text" placeholder="📍 ¿Dónde se imprime? (Recogida)" className="w-full px-4 py-3 bg-gray-100 rounded-lg outline-none border border-transparent focus:bg-white" value={recogida} onChange={(e)=>setRecogida(e.target.value)} onFocus={() => setActiveField('recogida')} />
+                    </div>
+
+                    {/* NUEVO INPUT ENTREGA CON FOCO ACTIVO */}
+                    <div className={`transition-all rounded-lg ${activeField === 'entrega' ? 'ring-2 ring-green-500' : ''}`}>
+                        <input type="text" placeholder="🏁 ¿Dónde te lo llevan? (Entrega)" className="w-full px-4 py-3 bg-gray-100 rounded-lg outline-none border border-transparent focus:bg-white" value={entrega} onChange={(e)=>setEntrega(e.target.value)} onFocus={() => setActiveField('entrega')} />
+                    </div>
+
+                    <input type="text" placeholder="Hora de Entrega Deseada" onFocus={(e)=>e.target.type='time'} onBlur={(e)=>e.target.type='text'} className="w-full px-4 py-3 bg-gray-100 rounded-lg outline-none" value={hora} onChange={(e)=>setHora(e.target.value)}/>
                     
-                    <input type="text" placeholder="Hora Deseada" onFocus={(e)=>e.target.type='time'} onBlur={(e)=>e.target.type='text'} className="w-full px-4 py-3 bg-gray-100 rounded-lg outline-none" value={hora} onChange={(e)=>setHora(e.target.value)}/>
-                    <button onClick={() => setIsModalOpen(true)} disabled={!isInfoValid} className={`w-full py-3 rounded-lg font-medium text-white transition-colors ${isInfoValid ? 'bg-black hover:bg-gray-800' : 'bg-gray-300'}`}>Confirmar</button>
+                    <button onClick={() => setIsModalOpen(true)} disabled={!isInfoValid} className={`w-full py-3 rounded-lg font-medium text-white transition-colors ${isInfoValid ? 'bg-black hover:bg-gray-800' : 'bg-gray-200 text-gray-500 cursor-not-allowed'}`}>Confirmar</button>
                   </div>
                 </div>
 
+                {/* Card Configuración */}
                 <div className="bg-white rounded-2xl shadow-2xl p-6">
                   <h3 className="text-xl font-semibold text-gray-800 mb-4">Configuración</h3>
                   <div className="space-y-4">
@@ -504,18 +634,19 @@
                 </div>
               </div>
 
-              {/* MAPA REAL */}
+              {/* Columna 2: Mapa CONECTADO */}
               <div className="flex flex-col gap-6 h-full">
-                <div className="bg-white rounded-2xl shadow-2xl overflow-hidden relative h-full min-h-[400px] border border-gray-200">
-                   <MapComponent onLocationSelect={(text) => setRecogida(text)} />
-                   <div className="absolute bottom-4 right-4 bg-white/90 backdrop-blur px-4 py-2 rounded-lg shadow-md text-xs font-bold text-gray-700 z-[400] pointer-events-none border border-gray-100">
-                      📍 Toca para seleccionar recogida
+                <div className={`bg-white rounded-2xl shadow-2xl overflow-hidden relative h-full min-h-[400px] border-4 transition-colors ${activeField === 'recogida' ? 'border-blue-100' : 'border-green-100'}`}>
+                   <MapComponent onLocationSelect={handleMapSelection} mapId="mapa-impresiones" />
+                   <div className={`absolute bottom-4 right-4 backdrop-blur px-4 py-2 rounded-lg shadow-md text-xs font-bold z-[400] pointer-events-none border transition-colors ${activeField === 'recogida' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-green-50 text-green-700 border-green-200'}`}>
+                      {activeField === 'recogida' ? '📍 Seleccionando: Dónde IMPRIMIR' : '🏁 Seleccionando: Dónde ENTREGAR'}
                    </div>
                 </div>
               </div>
-            </div>
+
+            </div> 
           </div>
-          {isModalOpen && <ConfirmacionModal onClose={() => setIsModalOpen(false)} servicio="Impresiones Rápidas" desde={recogida} hasta="Tu mano" hora={hora} onConfirmAction={handleSubmitPrint}/>}
+          {isModalOpen && <ConfirmacionModal onClose={() => setIsModalOpen(false)} servicio="Impresiones Rápidas" desde={recogida} hasta={entrega} hora={hora} onConfirmAction={handleSubmitPrint}/>}
         </div>
       );
     }
@@ -1047,27 +1178,36 @@
       const [authMode, setAuthMode] = useState("signin");
       const [isLoggedIn, setIsLoggedIn] = useState(false);
       const [currentUser, setCurrentUser] = useState(null);
+      const [showUserMenu, setShowUserMenu] = useState(false); 
 
+  // ... Estados Form Auth (NUEVOS) ...
 // Estados Form Auth (NUEVOS)
       const [email, setEmail] = useState("");
       const [pass, setPass] = useState("");
       const [nombre, setNombre] = useState("");
       const [apellido, setApellido] = useState("");
 
-      // Verificar sesión al cargar la página
-      useEffect(() => {
-          const token = localStorage.getItem('accessToken');
-          if (token) {
-              apiCall('/usuario/me/').then(u => {
-                  setIsLoggedIn(true);
-                  setCurrentUser(u);
-              }).catch(() => {
-                  setIsLoggedIn(false);
-                  localStorage.removeItem('accessToken');
-              });
-          }
-      }, []);
+// Verificar sesión al cargar la página
+    useEffect(() => {
+        const token = localStorage.getItem('accessToken');
+        if (token) {
+            apiCall('/usuario/me/').then(u => {
+                setIsLoggedIn(true);
+                setCurrentUser(u);
+            }).catch(() => {
+                setIsLoggedIn(false);
+                localStorage.removeItem('accessToken');
+            });
+        }
+    }, []);
 
+    // Función para cerrar sesión
+        const handleLogout = () => {
+          localStorage.removeItem('accessToken');
+          setIsLoggedIn(false);
+          setCurrentUser(null);
+          setShowUserMenu(false); 
+    };
       // Función para manejar Login y Registro
 // --- Función Conectada Correctamente ---
       const handleAuth = async () => {
@@ -1117,13 +1257,7 @@
               alert("❌ Error: " + e.message); 
           }
       };
-      
-      const handleLogout = () => {
-        localStorage.removeItem('accessToken');
-        setIsLoggedIn(false);
-        setCurrentUser(null);
-        setMenuOpen(false); // Cerrar menú si está abierto
-      };      
+           
       // ***** CAMBIO: Añadido 'driverWelcome', 'profilePhotoUpload' y 'carnetPhotoUpload' *****
       const [currentView, setCurrentView] =useState("home"); // 'home', 'newFavor', 'sendReceive', 'fastPrints', 'help', 'buyTake', 'driverRegister', 'driverWelcome', 'profilePhotoUpload', 'carnetPhotoUpload'
 
@@ -1351,7 +1485,35 @@
                 <button onClick={() => setMenuOpen(!menuOpen)} className="p-2 hover:bg-gray-100 rounded-lg transition-colors"><Menu /></button>
                 <div className="flex items-center gap-3">
                   {isLoggedIn ? (
-                    <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors"><User /></button>
+                    <div className="relative">
+                      {/* Botón con nombre de usuario y clic para abrir menú */}
+                      <button 
+                        onClick={() => setShowUserMenu(!showUserMenu)} 
+                        className="p-2 hover:bg-gray-100 rounded-lg transition-colors flex items-center gap-2"
+                      >
+                        <User />
+                        <span className="text-sm font-medium hidden sm:block">
+                            {currentUser?.nombre || 'Usuario'}
+                        </span>
+                      </button>
+                      
+                      {/* MENÚ DESPLEGABLE DE CERRAR SESIÓN */}
+                      {showUserMenu && (
+                        <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-lg shadow-xl border border-gray-100 z-50 animate-in fade-in zoom-in-95">
+                          <div className="py-1">
+                            <button className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                              Mi Perfil
+                            </button>
+                            <button 
+                              onClick={handleLogout} 
+                              className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+                            >
+                              Cerrar Sesión
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   ) : (
                     <>
                       <button onClick={() => { setAuthMode("signin"); setShowAuthModal(true); }} className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">Sign in</button>
