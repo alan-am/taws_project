@@ -95,3 +95,56 @@ Opción de "Cerrar Sesión".
 Frontend:
 
 Abrir frontend/script2.html en cualquier navegador moderno o servir con Live Server.
+
+
+
+### Ventanas Esqueletizadas (Frontend Only)
+
+Estas son las vistas que has visto implementadas visualmente pero que dependen de datos simulados o lógica local temporal hasta que conectes los endpoints del backend.
+
+IncomingOrderModal (Modal de Pedido Entrante)
+
+Qué es: Es la ventana emergente que simula una notificación Push para el repartidor cuando hay un nuevo pedido disponible.
+
+Estado actual: Se activa manualmente con el botón "🔔 Simular Push" en DriverFeedView. Usa datos del primer pedido de la lista para rellenar la información.
+
+Falta: Conectar a WebSockets o Polling real para que aparezca automáticamente cuando el servidor detecte un nuevo pedido.
+
+DriverAcceptanceModal (Modal de Aceptación Manual)
+
+Qué es: Es la ventana de confirmación que aparece cuando el repartidor hace clic en "Aceptar Pedido" desde la lista (DriverFeedView).
+
+Estado actual: Muestra el desglose de precios y detalles del pedido seleccionado antes de confirmar la llamada a la API.
+
+Falta: Validar en tiempo real si el pedido sigue disponible (aunque la API ya hace una validación básica).
+
+DriverProfileView (Perfil de Repartidor)
+
+Qué es: El dashboard completo que ve el repartidor al entrar a "Mi Perfil".
+
+Estado actual: Muestra el saludo, avatar y una lista de tarjetas de historial. Filtra los pedidos locales (/pedido/listar/) para mostrar solo los que coinciden con el ID del usuario actual.
+
+Falta: Un endpoint dedicado de "Mis Entregas" si la lista general se vuelve muy grande, y estadísticas reales de ganancias.
+
+UserMenuDropdown (Menú Desplegable)
+
+Qué es: El menú flotante que aparece al hacer clic en el icono de usuario/avatar.
+
+Estado actual: Alterna opciones según el rol (estudiante vs repartidor). El interruptor "Activar pedidos" es puramente visual (cambia de rojo a verde).
+
+Falta: Persistir el estado "Activo/Inactivo" del repartidor en el backend.
+
+ProfileEditModal (Edición de Perfil Estudiante)
+
+Qué es: El formulario modal para actualizar nombre, teléfono, etc.
+
+Estado actual: Funcional. Llama a la API PATCH para guardar cambios, pero falta asegurar que todos los campos (como WhatsApp) tengan su contraparte exacta en el modelo de base de datos si se agregan a futuro.
+
+¿Qué sigue?
+Para que estas dejen de ser "esqueletos" y cobren vida completa, los siguientes pasos lógicos serían (cuando estés listo para tocar el backend):
+
+WebSockets (Django Channels): Para que IncomingOrderModal aparezca sola.
+
+Endpoint de Métricas: Para que el DriverProfileView muestre ganancias reales.
+
+Gestión de Estado del Repartidor: Un campo is_active o disponible en el modelo Usuario para guardar el estado del interruptor del menú.
