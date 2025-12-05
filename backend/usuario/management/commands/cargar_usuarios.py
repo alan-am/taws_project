@@ -1,3 +1,4 @@
+#usuario/management/cargar_usuarios.py
 from django.core.management.base import BaseCommand
 from usuario.models import Usuario
 
@@ -6,6 +7,25 @@ class Command(BaseCommand):
 
     def handle(self, *args, **kwargs):
         self.stdout.write('🌱 Iniciando carga de usuarios...')
+
+        
+        # -----------------------------------------------------------
+        # Crear Usuario admin
+        # -----------------------------------------------------------
+        if not Usuario.objects.filter(email='admin@admin.com').exists():
+            Usuario.objects.create_superuser(
+                username='admin',
+                email='admin@admin.com',
+                password='admin', 
+                first_name='Super',
+                last_name='Admin',
+                rol='admin',
+                estado_verificacion='Aprobado' 
+            )
+            self.stdout.write(self.style.SUCCESS(' - Admin creado (admin@admin.com / admin)'))
+        else:
+            self.stdout.write(' - Admin ya existía')
+
 
         # -----------------------------------------------------------
         # USUARIO DE PRUEBA - estudiante

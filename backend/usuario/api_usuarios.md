@@ -15,6 +15,59 @@ Esta API maneja la creación, autenticación y gestión de usuarios en el sistem
 
 El sistema usa JSON Web Tokens (JWT) para manejar la autenticación. El token de acceso tiene una duración de **360 minutos** (6 horas). Después de eso, el usuario tendrá que loguearse de nuevo.
 
+
+
+## Endpoints de Administración (Solo Admin)
+Estos endpoints están restringidos únicamente a usuarios con el rol admin.
+
+### 1. Listar Usuarios PendientesObtiene la lista de usuarios que se han registrado pero aún no han sido verificados (estado Pendiente).
+Método: GET
+
+Endpoint: /api/usuario/admin/pendientes/
+
+Permisos: IsAdminRol (Requiere token de un usuario Admin)
+
+Respuesta Exitosa (200 OK):
+  ```json
+  {
+    "id": 5,
+    "nombre_usuario": "juan_p",
+    "correo": "juan@correo.com",
+    "nombre": "Juan",
+    "apellido": "Perez",
+    "rol": "repartidor",
+    "estado_verificacion": "Pendiente",
+    "foto_carnet": "[http://example.com/carnet_juan.jpg](http://example.com/carnet_juan.jpg)"
+  }
+```
+### 2. Verificar Identidad (Aprobar/Rechazar)
+Permite a un administrador cambiar el estado de verificación de un usuario.
+
+Método: PATCH
+
+Endpoint: /api/usuario/adminverificar/<? id>/
+
+Ejemplo: /api/usuario/admin/verificar/5/
+
+Permisos: IsAdminRol
+
+Cuerpo de Petición(Request Body):
+ ```json
+ {
+  "estado": "Aprobado" 
+}
+```
+Valores permitidos: "Aprobado", "Rechazado", "Pendiente".
+
+Respuesta Exitosa (200 OK)
+```
+{
+  "mensaje": "Usuario juan@correo.com actualizado exitosamente.",
+  "nuevo_estado": "Aprobado"
+} 
+```
+
+
 ### 1. Obtener Token (Login)
 
 Autentica a un usuario y devuelve un par de tokens (acceso y refresco).
