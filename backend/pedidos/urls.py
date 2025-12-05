@@ -11,7 +11,24 @@ urlpatterns = [
         PedidoViewSet.as_view({'get': 'publicados'}),
         name='pedido-publicados'
     ),
-    # Listar
+    #Endpoints codigo OTP - flujo de entrega
+    # Aceptar Pedido (Genera OTP), lleva el id del pedido aceptado en la ruta
+    path(
+        'api/pedido/aceptar/<int:pk>/',
+        PedidoViewSet.as_view({'patch': 'aceptar_pedido'}),
+        name='pedido-aceptar'
+    ),
+    # Finalizar Entrega (Valida OTP)
+    # POST /api/pedido/finalizar/1/  Body: { "otp": "xxxx" }
+    path(
+        'api/pedido/finalizar/<int:pk>/',
+        PedidoViewSet.as_view({'post': 'finalizar_entrega'}),
+        name='pedido-finalizar'
+    ),
+
+
+    # endpoitns CRUD
+    #listar
     path(
         'api/pedido/listar/',
         PedidoViewSet.as_view({'get': 'list'}),

@@ -14,16 +14,25 @@ class Pedidos(models.Model):
     descripcion= models.TextField()
 
     #Ubicaciones(texto directo)
-    punto_origen_id= models.CharField(max_length=255) 
-    punto_destino_id= models.CharField(max_length=255)
+    punto_origen= models.CharField(max_length=255) 
+    punto_destino= models.CharField(max_length=255)
+
 
     #estado pedido
-    estado= models.CharField(max_length=50, choices=[('Publicado', 'Publicado'), ('Aceptado', 'Aceptado')
-                                                     , ('Entregado', 'Entregado')], default='Publicado')
-    #Fechas y costo
+    ESTADOS = [
+        ('Publicado', 'Publicado'), 
+        ('Aceptado', 'Aceptado'), 
+        ('Entregado', 'Entregado'),
+        ('Cancelado', 'Cancelado')
+    ]
+    estado = models.CharField(max_length=50, choices=ESTADOS, default='Publicado')
+
+    #Tiempos
     fechaInicial= models.DateTimeField(auto_now_add= True) #fecha creacion registro del pedido
     horaDeseada= models.DateTimeField(null=True, blank=True) #campo opcional  
     fechaFinal= models.DateTimeField(null= True, blank= True) #fecha de cierre del pedido
+
+    #Costos
     costoEnvio= models.DecimalField(max_digits=5, decimal_places=2)
 
     #Atributos por si es impresion(son opcionales)
@@ -34,6 +43,10 @@ class Pedidos(models.Model):
         ('Color', 'Color')
     ]
     formato_color = models.CharField(max_length=50, choices=COLOR_CHOICES, null=True, blank=True)
+
+
+    #Codigo OTP - 4 digitos
+    codigo_entrega = models.CharField(max_length=4, null=True, blank=True)
 
     def __str__(self):
         return f"Pedido #{self.codigoPedido} - Cliente: {self.idCliente.username}"

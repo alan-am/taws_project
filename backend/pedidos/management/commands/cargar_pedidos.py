@@ -32,8 +32,8 @@ class Command(BaseCommand):
                 idRepartidor=None,
                 num_whats='0991111111',
                 descripcion='Pedido de prueba 1',
-                punto_origen_id='FCNM - Biblioteca',
-                punto_destino_id='FIEC - Bloque 16',
+                punto_origen='FCNM - Biblioteca',
+                punto_destino='FIEC - Bloque 11',
                 estado='Publicado',
                 horaDeseada=timezone.now() + timezone.timedelta(hours=1),
                 costoEnvio=1.50,
@@ -43,23 +43,23 @@ class Command(BaseCommand):
             self.stdout.write(self.style.SUCCESS(' - Pedido 1 creado (Publicado)'))
 
         # -----------------------------------------------------------
-        # Pedido 2 (Aceptado por Marco)
+        # Pedido 2 (Publicado, sin repartidor)
         # -----------------------------------------------------------
         if not Pedidos.objects.filter(descripcion='Pedido de prueba 2').exists():
             Pedidos.objects.create(
                 idCliente=cliente,
-                idRepartidor=repartidor_1,
+                idRepartidor=None,
                 num_whats='0992222222',
                 descripcion='Pedido de prueba 2',
-                punto_origen_id='FADCOM - Entrada',
-                punto_destino_id='FCSH - Laboratorios',
-                estado='Aceptado',
+                punto_origen='FADCOM - Entrada',
+                punto_destino='FCSH - Laboratorios',
+                estado='Publicado',
                 horaDeseada=timezone.now() + timezone.timedelta(hours=2),
                 costoEnvio=2.00,
                 archivo_pdf=None,
                 formato_color='Color'
             )
-            self.stdout.write(self.style.SUCCESS(' - Pedido 2 creado (Aceptado por Marco)'))
+            self.stdout.write(self.style.SUCCESS(' - Pedido 2 creado (Publicado)'))
 
         # -----------------------------------------------------------
         # Pedido 3 (Entregado por Juan)
@@ -70,8 +70,8 @@ class Command(BaseCommand):
                 idRepartidor=repartidor_2,
                 num_whats='0993333333',
                 descripcion='Pedido de prueba 3',
-                punto_origen_id='FIEC - Cafetería',
-                punto_destino_id='FCS - Aula 34',
+                punto_origen='FIEC - Cafetería',
+                punto_destino='FCSH - Aula 003',
                 estado='Entregado',
                 fechaFinal=timezone.now(),
                 horaDeseada=timezone.now(),

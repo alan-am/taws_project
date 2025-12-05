@@ -12,7 +12,7 @@ Debes enviar el token en el header:
 
 
 ---
-## 1. 📢 Listar Pedidos Publicados (Muro de Pedidos)
+## 📢 Listar Pedidos Publicados (Muro de Pedidos)
 
 Obtiene una lista filtrada mostrando únicamente los pedidos con estado **"Publicado"**, ordenados desde el más reciente. Esta es la lista principal que visualizan los repartidores para buscar encargos disponibles.
 
@@ -31,22 +31,78 @@ Obtiene una lista filtrada mostrando únicamente los pedidos con estado **"Publi
     "repartidor_nombre": null,
     "num_whats": "0998887777",
     "descripcion": "Impresión de tesis, 20 hojas",
-    "punto_origen_id": "Copias Juanita",
-    "punto_destino_id": "Facultad de Ingeniería",
+    "punto_origen": "Copias Juanita",
+    "punto_destino": "Facultad de Ingeniería",
     "estado": "Publicado",
     "fechaInicial": "2025-02-14T10:30:00Z",
     "horaDeseada": "2025-02-14T12:00:00Z",
     "fechaFinal": null,
     "costoEnvio": "1.50",
-    "archivo_pdf": "[http://ejemplo.com/tesis.pdf](http://ejemplo.com/tesis.pdf)",
-    "formato_color": "Blanco y Negro"
+    "archivo_pdf": "http://ejemplo.com/tesis.pdf",
+    "formato_color": "Blanco y Negro",
+    "codigo_entrega": null
   }
 ]
  ```
 
+ ### 🤝 Aceptar Pedido (Repartidor)
+ Permite a un repartidor tomar un pedido "Publicado".
+Importante: Al usar este endpoint, el sistema genera automáticamente un PIN de seguridad (OTP) único para la entrega y que se guardara en la db.
+ 
+* **Método:** `PATCH`
+* **Endpoint:** `/api/pedido/aceptar/<codigo>/`
+* **Ejemplo:** `/api/pedido/aceptar/10/`
+* **Permisos:** `IsAuthenticated`  (Solo usuarios con rol 'repartidor')
+* **Respuesta Exitosa (200 OK):**
+```json
+{
+  "mensaje": "Pedido aceptado correctamente.",
+  "pedido": {
+    "codigoPedido": 10,
+    "estado": "Aceptado",
+    "idRepartidor": 4,
+    "repartidor_nombre": "marco_repartidor",
+    "codigo_entrega": "8291" // PIN Generado
+    // ... resto de datos
+  }
+}
+```
+---
+ ### ✅ Finalizar Entrega (Validación OTP)
+ Permite al repartidor marcar el pedido como "Entregado". Para que sea exitoso, debe ingresar el PIN que el cliente le proporcionó.
+
+* **Método:** `POST`
+* **Endpoint:** `/api/pedido/finalizar/<codigo>/`
+* **Ejemplo:** `/api/pedido/finalizar/10/`
+* **Permisos:** `IsAuthenticated`   (Solo el repartidor asignado)
+
+* **Cuerpo de la peticion:**
+```json
+{
+  "otp": "8291"
+}
+
+```
+* **Respuesta exitosa(200 OK)**
+```json
+{
+    "mensaje": "Código correcto, Entrega finalizada exitosamente.",
+    "estado": "Entregado"
+}
+
+```
+
+* **Respuesta de error(400 Bad request)**
+```json
+{
+  "error": "Código incorrecto. Pídale al cliente que verifique el codigo."
+}
+
+
+```
 ---
 
-# 1. 📄 Listar Todos los Pedidos
+# 📄 Listar Todos los Pedidos
 
 Obtiene una lista de todos los pedidos registrados en el sistema, independientemente de su estado (Publicado, Aceptado, Entregado, Cancelado).
 
@@ -65,21 +121,22 @@ Obtiene una lista de todos los pedidos registrados en el sistema, independientem
     "repartidor_nombre": "marco_g",
     "num_whats": "0991112222",
     "descripcion": "Llevar documento a la facultad FCI",
-    "punto_origen_id": "Biblioteca Central",
-    "punto_destino_id": "Bloque F",
+    "punto_origen": "Biblioteca Central",
+    "punto_destino": "Bloque F",
     "estado": "Entregado",
     "fechaInicial": "2025-02-10T16:00:00Z",
     "horaDeseada": null,
     "fechaFinal": "2025-02-10T16:45:00Z",
     "costoEnvio": "2.50",
     "archivo_pdf": null,
-    "formato_color": null
+    "formato_color": null,
+    "codigo_entrega": "4582"
   }
 ]
  ```
 
 ---
-### 3. Crear un pedido
+### Crear un pedido
 * **Método:** `POST`
 * **Endpoint:** `/api/pedido/crear/`
 * **Permisos:** `IsAuthenticated` (Requiere token)
@@ -110,8 +167,8 @@ formato_color: "Blanco y Negro" o "Color".
   "idCliente": 5,
   "num_whats": "0991234567",
   "descripcion": "Impresión de diapositivas",
-  "punto_origen_id": "Cyber del frente",
-  "punto_destino_id": "Aula 102",
+  "punto_origen": "Cyber del frente",
+  "punto_destino": "Aula 102",
   "costoEnvio": "3.00",
   "archivo_pdf": "https://nube.com/archivo.pdf",
   "formato_color": "Color"
@@ -128,23 +185,27 @@ formato_color: "Blanco y Negro" o "Color".
   "repartidor_nombre": null,
   "num_whats": "0991234567",
   "descripcion": "Impresión de diapositivas",
-  "punto_origen_id": "Cyber del frente",
-  "punto_destino_id": "Aula 102",
+  "punto_origen": "Cyber del frente",
+  "punto_destino": "Aula 102",
   "estado": "Publicado",
   "fechaInicial": "2025-02-12T19:40:00Z",
   "horaDeseada": null,
   "fechaFinal": null,
   "costoEnvio": "3.00",
   "archivo_pdf": "https://nube.com/archivo.pdf",
-  "formato_color": "Color"
+  "formato_color": "Color",
+  "codigo_entrega": null
 }
+
 ```
 
 ---
 
 
 ---
-### 3. Obtener detalle de un pedido
+### Obtener detalle de un pedido
+Obtiene la información completa de un pedido.
+Nota: Aquí es donde el Cliente podrá ver el codigo_entrega (PIN) una vez que el pedido haya sido aceptado, para dictárselo al repartidor.
 * **Método:** `GET`
 * **Endpoint:** `/api/pedidos/detalle/<codigo>/`
 * **Ejemplo:** `/api/pedidos/detalle/10/`
@@ -154,27 +215,29 @@ formato_color: "Blanco y Negro" o "Color".
 {
   "codigoPedido": 10,
   "cliente_nombre": "joshua",
-  "punto_origen_id": "Cyber del frente",
-  "punto_destino_id": "Aula 102",
-  "estado": "Publicado",
+  "repartidor_nombre": "marco_repartidor",
+  "punto_origen": "Cyber del frente",
+  "punto_destino": "Aula 102",
+  "estado": "Aceptado",
   "fechaInicial": "2025-02-12T19:40:00Z",
   "archivo_pdf": "https://nube.com/archivo.pdf",
   "formato_color": "Color",
-  "costoEnvio": "3.00"
-  // ... resto de campos
+  "costoEnvio": "3.00",
+  "codigo_entrega": "8291" 
 }
 ```
 ---
-### 4. Actualizar pedido
+###  Actualizar pedido(General)
+Permite modificar campos generales de un pedido (ej. corregir descripción). No debe usarse para cambiar estados de flujo (Aceptar/Entregar), use los endpoints específicos arriba.
+
 * **Método:** `PATCH o PUT`
 * **Endpoint:** `/api/pedidos/actualizar/<codigo>/`
 * **Ejemplo:** `/api/pedidos/actualizar/10/`
 * **Permisos:** `IsAuthenticated` (Requiere token)
-* **Request Body (Patch) - Ejemplo repartidor acepta pedido**
+* **Request Body (Patch) - Ejemplo corregir descripcion**
 ```json
 {
-  "estado": "Aceptado",
-  "idRepartidor": 4
+  "descripcion": "Impresión de diapositivas deben ser 2 de cada una"
 }
 ```
 * **Respuesta Exitosa (200 OK):**
@@ -187,10 +250,10 @@ formato_color: "Blanco y Negro" o "Color".
   "idRepartidor": 4,
   "repartidor_nombre": "marco_repartidor",
   "num_whats": "0991234567",
-  "descripcion": "Impresión de diapositivas",
+  "descripcion": "Impresión de diapositivas deben ser 2 de cada una",
   "punto_origen_id": "Cyber del frente",
   "punto_destino_id": "Aula 102",
-  "estado": "Aceptado",
+  "estado": "Publicado",
   "fechaInicial": "2025-02-12T19:40:00Z",
   "costoEnvio": "3.00",
   "archivo_pdf": "https://nube.com/archivo.pdf",
@@ -198,7 +261,7 @@ formato_color: "Blanco y Negro" o "Color".
 }
 ```
 ---
-### 5. Eliminar pedido
+###  Eliminar pedido
 * **Método:** `DELETE`
 * **Endpoint:** `/api/pedidos/eliminar/<codigo>/`
 * **Ejemplo:** `/api/pedidos/eliminar/10/`

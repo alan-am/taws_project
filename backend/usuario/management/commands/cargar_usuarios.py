@@ -56,7 +56,7 @@ class Command(BaseCommand):
                 rol='repartidor',
                 telefono='0987654321'
             )
-            self.stdout.write(self.style.SUCCESS(' - Repartidor 1 (Marco) creado'))
+            self.stdout.write(self.style.SUCCESS(' - Repartidor 1 (Marco) creado(marco@correo.com/123)'))
 
         # -----------------------------------------------------------
         #  REPARTIDOR 2
@@ -71,6 +71,6 @@ class Command(BaseCommand):
                 rol='repartidor',
                 telefono='0912345678'
             )
-            self.stdout.write(self.style.SUCCESS(' - Repartidor 2 (Juan) creado'))
+            self.stdout.write(self.style.SUCCESS(' - Repartidor 2 (Juan) creado(juan@correo.com/123)'))
 
         self.stdout.write(self.style.SUCCESS('✅ Carga de usuarios completada.'))
