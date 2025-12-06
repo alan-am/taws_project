@@ -4,7 +4,17 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Web de Favores</title>
-  
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.css" />
+  <script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
+  <style>
+    /* Esto oculta la cajita blanca de instrucciones que tapa el mapa */
+    .leaflet-routing-container { display: none !important; }
+  </style>
+  <style>
+    /* Ocultar la caja blanca de instrucciones de manejo que sale en el mapa */
+    .leaflet-routing-container { display: none !important; }
+  </style> 
+
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Leaflet CSS -->
@@ -156,39 +166,53 @@
 
   <!-- Script de React (JSX) -->
   <script type="text/babel">
-    const { useState, useRef, useEffect } = React;
-    const API_BASE_URL = "http://127.0.0.1:8000/api";
+  const { useState, useRef, useEffect } = React;
 
+    // --- AGREGA ESTO JUSTO DEBAJO ---
+    const uploadToCloudMock = async (fileOrBlob) => {
+        return new Promise((resolve) => { 
+            setTimeout(() => { resolve("https://via.placeholder.com/150"); }, 1500); 
+        });
+    };
+    // --- CONFIGURACIÓN CENTRAL (NUEVA) ---
+    const API_BASE_URL = "https://taws-project.onrender.com/api";
+
+    // --- 1. FUNCIONES DE AYUDA Y MATEMÁTICAS ---
+    
     const apiCall = async (endpoint, method = "GET", body = null) => {
       const token = localStorage.getItem("accessToken");
-      const headers = {
-        "Content-Type": "application/json",
-        ...(token && { "Authorization": `Bearer ${token}` }) 
-      };
-
-      const config = {
-        method,
-        headers,
-        ...(body && { body: JSON.stringify(body) })
-      };
-
+      const headers = { "Content-Type": "application/json", ...(token && { "Authorization": `Bearer ${token}` }) };
       try {
-        const response = await fetch(`${API_BASE_URL}${endpoint}`, config);
-        
-        if (response.status === 401) {
-           console.warn("Sesión expirada");
-           localStorage.removeItem("accessToken");
-        }
-        
+        const response = await fetch(`${API_BASE_URL}${endpoint}`, { method, headers, ...(body && { body: JSON.stringify(body) }) });
+        if (response.status === 401) { console.warn("Sesión expirada"); localStorage.removeItem("accessToken"); }
         if (response.status === 204) return true;
-        
         const data = await response.json();
         if (!response.ok) throw new Error(data.detail || JSON.stringify(data));
         return data;
-      } catch (error) {
-        console.error("API Error:", error);
-        throw error;
-      }
+      } catch (error) { console.error("API Error:", error); throw error; }
+    };
+
+
+    // Matemáticas para la cotización en tiempo real
+    const deg2rad = (deg) => deg * (Math.PI / 180);
+
+    const getDistanceFromLatLonInKm = (lat1, lon1, lat2, lon2) => {
+      const R = 6371; // Radio de la tierra en km
+      const dLat = deg2rad(lat2 - lat1);
+      const dLon = deg2rad(lon2 - lon1);
+      const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      return R * c; 
+    };
+
+    const parseCoordinates = (str) => {
+        if (!str || typeof str !== 'string' || !str.includes("Ubicación:")) return null;
+        try {
+            const parts = str.replace("Ubicación:", "").trim().split(",");
+            if (parts.length === 2) return { lat: parseFloat(parts[0]), lng: parseFloat(parts[1]) };
+        } catch (e) { return null; }
+        return null;
     };
 
     // --- Iconos ---
@@ -209,6 +233,7 @@
     const Check = ({ className }) => (<svg className={className} strokeWidth="3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"></polyline></svg>);
     const HelpCircle = () => (<svg {...IconProps} className="w-5 h-5 text-white"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>);
     const IdCard = ({ className }) => (<svg className={className} strokeWidth="1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"></rect><circle cx="8" cy="10" r="2"></circle><path d="M12 12c-2.5 0-5 1.5-5 3v2h10v-2c0-1.5-2.5-3-5-3z"></path><line x1="14" y1="8" x2="19" y2="8"></line><line x1="14" y1="11" x2="19" y2="11"></line></svg>);
+    
     
     // Icono específico para el repartidor en el historial
     const DeliveryIcon = ({ className }) => (
@@ -400,44 +425,110 @@
         );
     }
 
-    function MapComponent({ onLocationSelect, mapId }) {
-      const mapRef = useRef(null); 
-      const markerRef = useRef(null); 
+// --- REEMPLAZA TU FUNCIÓN MapComponent POR ESTA ---
+    function MapComponent({ onLocationSelect, mapId, routeStart, routeEnd }) {
+      const mapRef = useRef(null);
+      const startMarkerRef = useRef(null);
+      const endMarkerRef = useRef(null);
+      const routingControlRef = useRef(null);
       const onSelectRef = useRef(onLocationSelect);
 
-      useEffect(() => {
-        onSelectRef.current = onLocationSelect;
-      }, [onLocationSelect]);
+      // Iconos (Sin cambios)
+      const iconBlue = new L.Icon({ iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-blue.png', shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41] });
+      const iconGreen = new L.Icon({ iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-green.png', shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41] });
 
+      useEffect(() => { onSelectRef.current = onLocationSelect; }, [onLocationSelect]);
+
+      // 1. INICIALIZACIÓN DEL MAPA (VOLVEMOS A OPENSTREETMAP)
       useEffect(() => {
         if (mapRef.current) return;
-        const containerId = mapId || "default-map"; 
+        
+        const containerId = mapId || "default-map";
         if (!document.getElementById(containerId)) return;
 
-        const ESPOL_COORDS = [-2.1467, -79.9654]; 
-        try {
-            const map = L.map(containerId).setView(ESPOL_COORDS, 16); 
-            mapRef.current = map;
-            L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { attribution: "© OpenStreetMap", maxZoom: 19 }).addTo(map);
-            map.on("click", function(e) {
-                const { lat, lng } = e.latlng;
-                if (markerRef.current) {
-                    markerRef.current.setLatLng([lat, lng]);
-                } else {
-                    markerRef.current = L.marker([lat, lng]).addTo(map);
-                }
-                if (onSelectRef.current) {
-                    onSelectRef.current(`Ubicación: ${lat.toFixed(5)}, ${lng.toFixed(5)}`);
-                }
-            });
-        } catch (err) { console.error("Error inicializando mapa:", err); }
-        return () => { if (mapRef.current) { mapRef.current.off(); mapRef.current.remove(); mapRef.current = null; } };
+        const ESPOL_COORDS = [-2.1467, -79.9654];
+        const map = L.map(containerId).setView(ESPOL_COORDS, 16);
+        mapRef.current = map;
+
+        // CAMBIO AQUÍ: Usamos OpenStreetMap (Gratis y sin Token) en vez de Mapbox
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { 
+            attribution: "© OpenStreetMap", 
+            maxZoom: 19 
+        }).addTo(map);
+        
+        map.on("click", function(e) {
+            const { lat, lng } = e.latlng;
+            if (onSelectRef.current) {
+                onSelectRef.current(`Ubicación: ${lat.toFixed(5)}, ${lng.toFixed(5)}`);
+            }
+        });
+
+        return () => { 
+            if (mapRef.current) { 
+                mapRef.current.remove(); 
+                mapRef.current = null; 
+            } 
+        };
       }, [mapId]);
+
+      // 2. CONTROL DE MARCADORES (IGUAL QUE ANTES)
+      useEffect(() => {
+         const map = mapRef.current;
+         if (!map) return;
+
+         if (routeStart) {
+             if (startMarkerRef.current) startMarkerRef.current.setLatLng([routeStart.lat, routeStart.lng]);
+             else startMarkerRef.current = L.marker([routeStart.lat, routeStart.lng], { icon: iconBlue }).addTo(map).bindPopup("Recogida");
+             if (!routeEnd) map.panTo([routeStart.lat, routeStart.lng]);
+         } else if (startMarkerRef.current) {
+             startMarkerRef.current.remove(); startMarkerRef.current = null;
+         }
+
+         if (routeEnd) {
+             if (endMarkerRef.current) endMarkerRef.current.setLatLng([routeEnd.lat, routeEnd.lng]);
+             else endMarkerRef.current = L.marker([routeEnd.lat, routeEnd.lng], { icon: iconGreen }).addTo(map).bindPopup("Entrega");
+         } else if (endMarkerRef.current) {
+             endMarkerRef.current.remove(); endMarkerRef.current = null;
+         }
+      }, [routeStart, routeEnd]);
+
+      // 3. RUTA (VOLVEMOS A OSRM POR DEFECTO)
+      useEffect(() => {
+          const map = mapRef.current;
+          if (!map) return;
+
+          // Limpiar ruta anterior
+          if (routingControlRef.current) {
+              try { map.removeControl(routingControlRef.current); } catch(e){}
+              routingControlRef.current = null;
+          }
+
+          if (routeStart && routeEnd) {
+              const p1 = L.latLng(routeStart.lat, routeStart.lng);
+              const p2 = L.latLng(routeEnd.lat, routeEnd.lng);
+
+              // CAMBIO AQUÍ: Quitamos la configuración de Mapbox y dejamos la básica
+              try {
+                  routingControlRef.current = L.Routing.control({
+                      waypoints: [p1, p2],
+                      // Al no poner "router", usa el servidor público gratuito por defecto
+                      lineOptions: {
+                          styles: [{ color: 'black', opacity: 0.8, weight: 6 }] 
+                      },
+                      show: false, 
+                      addWaypoints: false, 
+                      draggableWaypoints: false, 
+                      fitSelectedRoutes: true,
+                      createMarker: () => null 
+                  }).addTo(map);
+              } catch (e) { console.error("Error ruta:", e); }
+          }
+      }, [routeStart, routeEnd]);
 
       return <div id={mapId || "default-map"} className="w-full h-full z-0"></div>;
     }
 
-    function SendReceiveView({ onGoBack, onNavigateToFastPrints, onNavigateToBuyTake }) {
+      function SendReceiveView({ onGoBack, onNavigateToFastPrints, onNavigateToBuyTake }) {
       const [isModalOpen, setIsModalOpen] = useState(false);
       const [fecha, setFecha] = useState("");
       const [recogida, setRecogida] = useState("");
@@ -446,36 +537,66 @@
       const [descripcion, setDescripcion] = useState("");
       const [whatsapp, setWhatsapp] = useState("");
       const [activeField, setActiveField] = useState("recogida");
+      
+      // ESTADOS NUEVOS PARA PRECIO
+      const [precioEstimado, setPrecioEstimado] = useState(0);
+      const [distanciaKm, setDistanciaKm] = useState(0);
+
+      // CÁLCULO AUTOMÁTICO
+      useEffect(() => {
+          const calcular = () => {
+              const coord1 = parseCoordinates(recogida);
+              const coord2 = parseCoordinates(entrega);
+              
+              let dist = 0;
+              if (coord1 && coord2) {
+                  // Si ambos son puntos del mapa, calculamos distancia real
+                  dist = getDistanceFromLatLonInKm(coord1.lat, coord1.lng, coord2.lat, coord2.lng);
+              } else if (recogida && entrega) {
+                   dist = 1.0; // Tarifa mínima si es texto manual
+              }
+              setDistanciaKm(dist);
+
+              // FÓRMULA DE PRECIO: Base ($0.50) + Arranque ($0.25) + ($0.25 x KM)
+              const total = 0.50 + 0.25 + (dist * 0.25);
+              setPrecioEstimado(total);
+          };
+          calcular();
+      }, [recogida, entrega]); // Se ejecuta cuando cambian las direcciones
 
       const isFormValid = fecha.trim() !== "" && recogida.trim() !== "" && entrega.trim() !== "" && hora.trim() !== "" && descripcion.trim() !== "" && whatsapp.trim() !== "";
-
-      const handleMapSelection = (coordTexto) => {
-          if (activeField === "recogida") setRecogida(coordTexto);
-          else setEntrega(coordTexto);
+      
+      const handleMapSelection = (coordTexto) => { 
+        if (activeField === "recogida") setRecogida(coordTexto); 
+        else setEntrega(coordTexto); 
       };
-
+      
       const handleSubmit = async () => {
            try {
               if (!localStorage.getItem("accessToken")) { alert("Debes iniciar sesión."); return; }
-              const nuevoPedido = await apiCall("/pedido/crear/", "POST", {
+              const nuevoPedido = await apiCall("/pedido/crear/", "POST", { 
                   num_whats: whatsapp, 
-                  descripcion: `${descripcion} (De: ${recogida} -> A: ${entrega})`,
-                  punto_origen_id: 1, punto_desitno_id: 1,
-                  horaDeseada: new Date().toISOString(),
-                  fechaInicial: new Date().toISOString(),
-                  costoEnvio: 3.75, estado: "Publicado"
+                  descripcion: `${descripcion} (De: ${recogida} -> A: ${entrega})`, 
+                  punto_origen_id: 1, 
+                  punto_desitno_id: 1, 
+                  horaDeseada: new Date().toISOString(), 
+                  fechaInicial: new Date().toISOString(), 
+                  costoEnvio: precioEstimado, // Usamos el precio calculado
+                  estado: "Publicado" 
               });
-              alert("✅ Pedido creado. La simulación iniciará en breve...");
-              onGoBack();
-              setTimeout(async () => {
-                  try {
-                      await apiCall(`/pedido/simular-aceptacion/${nuevoPedido.codigoPedido}/`, "POST");
-                      setTimeout(async () => {
-                          await apiCall(`/pedido/simular-entrega/${nuevoPedido.codigoPedido}/`, "POST");
-                          alert("🏁 Tu pedido ha sido ENTREGADO por el repartidor.");
+              alert("✅ Pedido creado. Buscando repartidor..."); onGoBack();
+              
+              // Simulación de flujo
+              setTimeout(async () => { 
+                  try { 
+                      await apiCall(`/pedido/simular-aceptacion/${nuevoPedido.codigoPedido}/`, "POST"); 
+                      setTimeout(async () => { 
+                          await apiCall(`/pedido/simular-entrega/${nuevoPedido.codigoPedido}/`, "POST"); 
+                          alert("🏁 Tu pedido ha sido ENTREGADO."); 
                       }, 15000); 
-                  } catch (e) { console.error("Error en simulación:", e); }
+                  } catch (e) { console.error(e); } 
               }, 5000);
+
           } catch (error) { alert("Error: " + error.message); }
       };
 
@@ -485,40 +606,65 @@
             <div className="flex items-center justify-between mb-6">
               <button onClick={onGoBack} className="p-2 hover:bg-gray-100 rounded-full transition-colors"><ArrowLeft /></button>
               <div className="flex gap-2">
-                <button className="px-5 py-2 bg-black text-white rounded-full font-medium text-sm">Enviar/Recoger</button>
-                <button onClick={onNavigateToFastPrints} className="px-5 py-2 bg-gray-200 text-gray-800 rounded-full font-medium text-sm hover:bg-gray-300 transition-colors">Impresiones rápidas</button>
-                <button onClick={onNavigateToBuyTake} className="px-5 py-2 bg-gray-200 text-gray-800 rounded-full font-medium text-sm hover:bg-gray-300 transition-colors">Comprar/LLevar</button>
+                  <button className="px-5 py-2 bg-black text-white rounded-full font-medium text-sm">Enviar/Recoger</button>
+                  <button onClick={onNavigateToFastPrints} className="px-5 py-2 bg-gray-200 text-gray-800 rounded-full font-medium text-sm hover:bg-gray-300 transition-colors">Impresiones rápidas</button>
+                  <button onClick={onNavigateToBuyTake} className="px-5 py-2 bg-gray-200 text-gray-800 rounded-full font-medium text-sm hover:bg-gray-300 transition-colors">Comprar/LLevar</button>
               </div>
               <div className="w-10 h-10"></div>
             </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div className="bg-white rounded-2xl shadow-lg p-6 sm:p-8 space-y-4">
                 <h2 className="text-3xl font-bold text-gray-800 mb-4">Información</h2>
                 <input type="text" placeholder="Fecha" onFocus={(e) => (e.target.type = "date")} onBlur={(e) => (e.target.type = "text")} className="w-full px-4 py-3 bg-gray-100 rounded-lg outline-none focus:ring-2 focus:ring-black" value={fecha} onChange={(e) => setFecha(e.target.value)} />
+                
                 <div className={`transition-all rounded-lg ${activeField === "recogida" ? "ring-2 ring-blue-500" : ""}`}>
                     <input type="text" placeholder="📍 Punto de Recogida (Toca aquí)" className="w-full px-4 py-3 bg-gray-100 rounded-lg outline-none border border-transparent focus:bg-white" value={recogida} onChange={(e) => setRecogida(e.target.value)} onFocus={() => setActiveField("recogida")} />
                 </div>
+                
                 <div className={`transition-all rounded-lg ${activeField === "entrega" ? "ring-2 ring-green-500" : ""}`}>
                     <input type="text" placeholder="🏁 Punto de Entrega (Toca aquí)" className="w-full px-4 py-3 bg-gray-100 rounded-lg outline-none border border-transparent focus:bg-white" value={entrega} onChange={(e) => setEntrega(e.target.value)} onFocus={() => setActiveField("entrega")} />
                 </div>
-                <input type="text" placeholder="Hora de Entrega Deseada" onFocus={(e) => (e.target.type = "time")} onBlur={(e) => (e.target.type = "text")} className="w-full px-4 py-3 bg-gray-100 rounded-lg outline-none focus:ring-2 focus:ring-black" value={hora} onChange={(e) => setHora(e.target.value)} />
+
+                <input type="text" placeholder="Hora de Entrega" onFocus={(e) => (e.target.type = "time")} onBlur={(e) => (e.target.type = "text")} className="w-full px-4 py-3 bg-gray-100 rounded-lg outline-none focus:ring-2 focus:ring-black" value={hora} onChange={(e) => setHora(e.target.value)} />
                 <textarea placeholder="Descripción ¿Qué se transporta?" rows="4" className="w-full px-4 py-3 bg-gray-100 rounded-lg outline-none focus:ring-2 focus:ring-black" value={descripcion} onChange={(e) => setDescripcion(e.target.value)}></textarea>
                 <input type="tel" placeholder="Numero de Whatsapp" className="w-full px-4 py-3 bg-gray-100 rounded-lg outline-none focus:ring-2 focus:ring-black" value={whatsapp} onChange={(e) => setWhatsapp(e.target.value)} />
-                <button onClick={() => setIsModalOpen(true)} disabled={!isFormValid} className={isFormValid ? "w-full bg-black text-white py-3 rounded-lg font-medium hover:bg-gray-800 transition-colors mt-2" : "w-full bg-gray-200 text-gray-500 py-3 rounded-lg font-medium cursor-not-allowed mt-2"}>Confirmar</button>
+                
+                {/* --- VISUALIZACIÓN DE PRECIO EN VIVO --- */}
+                <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 flex justify-between items-center mt-4 animate-in fade-in">
+                    <div>
+                        <p className="text-xs text-gray-500 font-bold uppercase">Costo Estimado</p>
+                        <p className="text-xs text-gray-400 mt-1">
+                           {distanciaKm > 0 ? `Distancia: ${distanciaKm.toFixed(2)} km` : "Define origen y destino"}
+                        </p>
+                    </div>
+                    <div className="text-right">
+                        <span className="text-3xl font-black text-black">${precioEstimado.toFixed(2)}</span>
+                    </div>
+                </div>
+
+                <button onClick={() => setIsModalOpen(true)} disabled={!isFormValid} className="w-full bg-black text-white py-3 rounded-lg font-medium hover:bg-gray-800 transition-colors mt-2 disabled:bg-gray-200 disabled:text-gray-500">Confirmar</button>
               </div>
+              
               <div className={`bg-white rounded-2xl shadow-lg overflow-hidden relative min-h-[400px] border-4 transition-colors ${activeField === "recogida" ? "border-blue-100" : "border-green-100"}`}>
-                 <MapComponent onLocationSelect={handleMapSelection} mapId="mapa-envios" />
-                 <div className={`absolute bottom-4 right-4 backdrop-blur px-4 py-2 rounded-lg shadow-md text-xs font-bold z-[400] pointer-events-none border transition-colors ${activeField === "recogida" ? "bg-blue-50 text-blue-700 border-blue-200" : "bg-green-50 text-green-700 border-green-200"}`}>
+                <MapComponent 
+                onLocationSelect={handleMapSelection} 
+                mapId="mapa-envios" 
+                routeStart={parseCoordinates(recogida)} 
+                routeEnd={parseCoordinates(entrega)} 
+                />
+                 <div className={`absolute bottom-4 right-4 backdrop-blur px-4 py-2 rounded-lg shadow-md text-xs font-bold z-[400] border ${activeField === "recogida" ? "bg-blue-50 text-blue-700 border-blue-200" : "bg-green-50 text-green-700 border-green-200"}`}>
                     {activeField === "recogida" ? "📍 Seleccionando: RECOGIDA" : "🏁 Seleccionando: ENTREGA"}
                  </div>
               </div>
             </div>
           </div>
-          {isModalOpen && <ConfirmacionModal onClose={() => setIsModalOpen(false)} servicio="Enviar/Recoger" desde={recogida} hasta={entrega} hora={hora} onConfirmAction={handleSubmit} costoBase={1.50} />}
+          {isModalOpen && <ConfirmacionModal onClose={() => setIsModalOpen(false)} servicio="Enviar/Recoger" desde={recogida} hasta={entrega} hora={hora} onConfirmAction={handleSubmit} costoBase={precioEstimado} />}
         </div>
       );
     }
 
+  
     function FastPrintsView({ onGoBack, onNavigateToSendReceive, onNavigateToBuyTake }) {
       const [isModalOpen, setIsModalOpen] = useState(false);
       const [fecha, setFecha] = useState("");
@@ -885,30 +1031,171 @@
         );
     }
 
-    function DriverFeedView({ onGoBack, onNavigateToActiveOrder }) {
+    function DriverDashboardView({ onGoBack, onNavigateToActiveOrder, currentUser }) {
+      const [isOnline, setIsOnline] = useState(false); // Estado: ¿Está trabajando?
       const [orders, setOrders] = useState([]);
-      const [loading, setLoading] = useState(true);
-      useEffect(() => { fetchOrders(); }, []);
-      const fetchOrders = async () => { try { const data = await apiCall("/pedido/listar/"); const disponibles = data.filter(o => o.estado === "Publicado"); setOrders(disponibles); } catch (error) { console.error(error); } finally { setLoading(false); } };
-      const handleAccept = async (orderId) => { try { await apiCall(`/pedido/aceptar/${orderId}/`, "PATCH"); alert("¡Pedido aceptado! Redirigiendo al mapa..."); onNavigateToActiveOrder(orderId); } catch (error) { alert("Error: " + error.message); fetchOrders(); } };
+      const [myStats, setMyStats] = useState({ ganancia: 0, completados: 0 });
+      const [loading, setLoading] = useState(false);
+
+      // Simulación de carga de pedidos y cálculo de ganancias
+      useEffect(() => {
+          fetchData();
+      }, [currentUser]);
+
+      const fetchData = async () => {
+          setLoading(true);
+          try {
+              const allOrders = await apiCall("/pedido/listar/");
+              
+              // 1. Filtrar pedidos disponibles (Publicados) para la lista
+              const disponibles = allOrders.filter(o => o.estado === "Publicado");
+              setOrders(disponibles);
+
+              // 2. Calcular ganancias del día (Solo pedidos 'Entregados' por este usuario)
+              // Nota: Como no tenemos endpoint de ganancias, lo calculamos aquí filtrando
+              if (currentUser) {
+                  const misEntregas = allOrders.filter(o => 
+                      o.estado === "Entregado" && o.idRepartidor === currentUser.id
+                  );
+                  
+                  const totalDinero = misEntregas.reduce((sum, order) => sum + parseFloat(order.costoEnvio || 0), 0);
+                  setMyStats({
+                      ganancia: totalDinero.toFixed(2),
+                      completados: misEntregas.length
+                  });
+              }
+
+          } catch (error) {
+              console.error(error);
+          } finally {
+              setLoading(false);
+          }
+      };
+
+      const handleToggleOnline = () => {
+          setIsOnline(!isOnline);
+          if (!isOnline) fetchData(); // Refrescar datos al conectarse
+      };
+
+      const handleAccept = async (orderId) => {
+          if (!isOnline) return alert("Debes conectarte para aceptar pedidos.");
+          
+          try {
+              await apiCall(`/pedido/aceptar/${orderId}/`, "PATCH");
+              alert("¡Pedido aceptado! A trabajar.");
+              onNavigateToActiveOrder(orderId);
+          } catch (error) {
+              alert("Error: " + error.message);
+              fetchData();
+          }
+      };
+
       return (
-        <div className="min-h-screen bg-gray-50 p-4 animate-in fade-in">
-          <header className="flex items-center mb-6"><button onClick={onGoBack} className="p-2 mr-4 bg-white rounded-full shadow"><ArrowLeft /></button><h1 className="text-2xl font-bold text-gray-800">Pedidos Disponibles</h1></header>
-          {loading ? <p className="text-center py-10">Cargando...</p> : (
-            <div className="space-y-4 max-w-2xl mx-auto">
-                {orders.length === 0 && <p className="text-center text-gray-500">No hay pedidos disponibles.</p>}
-                {orders.map(order => (
-                    <div key={order.codigoPedido} className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                        <div className="flex justify-between mb-2"><h3 className="font-bold text-lg">Pedido #{order.codigoPedido}</h3><span className="bg-green-100 text-green-800 px-3 py-1 rounded-full font-bold">${order.costoEnvio}</span></div>
-                        <p className="text-gray-600 mb-4">{order.descripcion}</p>
-                        <button onClick={() => handleAccept(order.codigoPedido)} className="w-full bg-black text-white py-3 rounded-lg font-bold hover:bg-gray-800">Aceptar Pedido</button>
+        <div className="min-h-screen bg-gray-50 pb-20 animate-in fade-in">
+          {/* --- HEADER DEL DASHBOARD --- */}
+          <header className="bg-white shadow-sm sticky top-0 z-30">
+            <div className="max-w-3xl mx-auto px-4 py-4 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                    <button onClick={onGoBack} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+                        <ArrowLeft />
+                    </button>
+                    <div>
+                        <h1 className="text-xl font-bold text-gray-900 leading-tight">Hola, {currentUser?.nombre || "Repartidor"}</h1>
+                        <p className="text-xs text-gray-500">{isOnline ? "🟢 En línea y buscando..." : "🔴 Desconectado"}</p>
                     </div>
-                ))}
+                </div>
+                
+                {/* BOTÓN DE CONEXIÓN */}
+                <button 
+                    onClick={handleToggleOnline}
+                    className={`relative inline-flex h-8 w-14 items-center rounded-full transition-colors duration-300 focus:outline-none ${isOnline ? 'bg-green-500' : 'bg-gray-300'}`}
+                >
+                    <span className={`inline-block h-6 w-6 transform rounded-full bg-white shadow transition-transform duration-300 ${isOnline ? 'translate-x-7' : 'translate-x-1'}`} />
+                </button>
             </div>
-          )}
+            
+            {/* --- ESTADÍSTICAS RÁPIDAS --- */}
+            <div className="border-t border-gray-100">
+                <div className="max-w-3xl mx-auto grid grid-cols-2 divide-x divide-gray-100">
+                    <div className="p-4 text-center">
+                        <p className="text-xs text-gray-500 uppercase font-bold tracking-wider">Ganancia Hoy</p>
+                        <p className="text-2xl font-black text-gray-900">${myStats.ganancia}</p>
+                    </div>
+                    <div className="p-4 text-center">
+                        <p className="text-xs text-gray-500 uppercase font-bold tracking-wider">Completados</p>
+                        <p className="text-2xl font-black text-gray-900">{myStats.completados}</p>
+                    </div>
+                </div>
+            </div>
+          </header>
+
+          <main className="max-w-3xl mx-auto px-4 py-6">
+            <h2 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+                <div className="w-2 h-6 bg-black rounded-full"></div>
+                Pedidos Disponibles
+            </h2>
+
+            {/* --- LISTA DE PEDIDOS --- */}
+            <div className="relative min-h-[300px]">
+                
+                {/* CAPA DE BLOQUEO SI ESTÁ OFFLINE */}
+                {!isOnline && (
+                    <div className="absolute inset-0 z-10 bg-white/60 backdrop-blur-sm flex flex-col items-center justify-center text-center p-6 rounded-xl border-2 border-dashed border-gray-300">
+                        <div className="bg-white p-4 rounded-full shadow-lg mb-4">
+                            <span className="text-4xl">😴</span>
+                        </div>
+                        <h3 className="text-xl font-bold text-gray-800">Estás desconectado</h3>
+                        <p className="text-gray-500 mb-6 max-w-xs">Conéctate para ver los pedidos disponibles y empezar a ganar dinero.</p>
+                        <button onClick={handleToggleOnline} className="bg-black text-white px-8 py-3 rounded-full font-bold hover:bg-gray-800 transition-all transform hover:scale-105 shadow-xl">
+                            Conectarse ahora
+                        </button>
+                    </div>
+                )}
+
+                {/* CONTENIDO DE LA LISTA */}
+                <div className={`space-y-4 transition-all duration-500 ${!isOnline ? 'filter blur-sm opacity-50' : ''}`}>
+                    {loading ? (
+                        <p className="text-center py-10 text-gray-400">Buscando pedidos cercanos...</p>
+                    ) : orders.length === 0 ? (
+                        <div className="text-center py-12 bg-white rounded-xl border border-gray-100 shadow-sm">
+                            <p className="text-gray-400 mb-2">No hay pedidos por ahora.</p>
+                            <p className="text-sm text-gray-300">Relájate un poco ☕</p>
+                        </div>
+                    ) : (
+                        orders.map(order => (
+                            <div key={order.codigoPedido} className="bg-white p-5 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow relative overflow-hidden group">
+                                <div className="absolute top-0 left-0 w-1 h-full bg-black group-hover:bg-blue-600 transition-colors"></div>
+                                <div className="flex justify-between items-start mb-3 pl-3">
+                                    <div>
+                                        <span className="bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded-md font-bold uppercase">Favor</span>
+                                        <h3 className="font-bold text-lg text-gray-900 mt-1">Pedido #{order.codigoPedido}</h3>
+                                    </div>
+                                    <div className="text-right">
+                                        <span className="block text-2xl font-black text-green-600">${order.costoEnvio}</span>
+                                        <span className="text-xs text-gray-400">Ganancia est.</span>
+                                    </div>
+                                </div>
+                                <p className="text-gray-600 mb-4 pl-3 text-sm line-clamp-2">{order.descripcion}</p>
+                                <div className="pl-3">
+                                    <button 
+                                        onClick={() => handleAccept(order.codigoPedido)} 
+                                        disabled={!isOnline}
+                                        className="w-full bg-black text-white py-3 rounded-lg font-bold hover:bg-gray-800 active:scale-95 transition-all flex justify-center items-center gap-2 disabled:cursor-not-allowed"
+                                    >
+                                        <span>Aceptar Pedido</span>
+                                        <ArrowLeft className="w-4 h-4 rotate-180" />
+                                    </button>
+                                </div>
+                            </div>
+                        ))
+                    )}
+                </div>
+            </div>
+          </main>
         </div>
       );
     }
+
 
     function MyOrdersView({ onGoBack, onNavigateToActiveOrder, currentUserId }) {
       const [orders, setOrders] = useState([]);
