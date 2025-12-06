@@ -64,4 +64,11 @@ urlpatterns = [
         UsuarioViewSet.as_view({'patch': 'gestionar_verificacion'}), 
         name='usuario-gestionar-verificacion'
     ),
+
+    # Subir Imagen, modifica al usuario logueado actual
+    path(
+        'api/usuario/subir-imagen/', 
+        UsuarioViewSet.as_view({'post': 'subir_imagen'}), 
+        name='usuario-subir-imagen'
+    ),
 ]

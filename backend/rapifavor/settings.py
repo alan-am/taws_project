@@ -15,6 +15,9 @@ from pathlib import Path
 from datetime import timedelta
 import os
 from dotenv import load_dotenv
+import cloudinary
+import cloudinary.uploader
+import cloudinary.api
 
 # Cargar variables del archivo .env
 load_dotenv()
@@ -171,3 +174,13 @@ SIMPLE_JWT = {
 
 # Config del cors, por el momento abierto para todos
 CORS_ALLOW_ALL_ORIGINS = True
+
+
+#Config de cloudinary
+cloudinary.config( 
+  cloud_name = os.getenv('CLOUD_NAME'), 
+  api_key = os.getenv('CLOUD_API_KEY'), 
+  api_secret = os.getenv('CLOUD_API_SECRET'),
+  secure = True
+)
+

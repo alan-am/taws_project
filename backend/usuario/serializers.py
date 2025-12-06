@@ -70,4 +70,8 @@ class UsuarioSerializer(serializers.ModelSerializer):
         return instance
 
 
+# Serializer simple solo para recibir la imagen
+class ImagenUploadSerializer(serializers.Serializer):
+    imagen = serializers.ImageField()
+    tipo = serializers.ChoiceField(choices=[('perfil', 'Foto de Perfil'), ('carnet', 'Foto de Carnet')])
 
