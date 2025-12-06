@@ -8,6 +8,9 @@ from .serializers import PedidoSerializer
 from django.utils import timezone
 import random
 
+from pedidos.precios_dinamicos import calcular_precio_dinamico
+from pedidos.metricas_financieras import calcular_ganancias_repartidor
+
 class PedidoViewSet(viewsets.ModelViewSet):
     queryset = Pedidos.objects.all()
     serializer_class = PedidoSerializer
@@ -105,3 +108,61 @@ class PedidoViewSet(viewsets.ModelViewSet):
                 {'error': 'Código incorrecto. Pídale al cliente que verifique el codigo.'}, 
                 status=status.HTTP_400_BAD_REQUEST
             )
+        
+
+
+
+     #  ENDPOINT: Calcular PRECIO DINÁMICO
+    # ------------------------------------------------------------
+    @action(detail=False, methods=['get'])
+    def precio_dinamico(self, request):
+        """
+        Calcula el precio dinámico:
+        /api/pedidos/precio_dinamico/?distancia=3.5&tipo=urgente
+        """
+        distancia = request.query_params.get('distancia')
+        tipo = request.query_params.get('tipo')
+
+        if not distancia or not tipo:
+            return Response(
+                {'error': 'Debe enviar los parámetros: distancia y tipo.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            distancia = float(distancia)
+            precio = calcular_precio_dinamico(distancia, tipo)
+        except ValueError as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response(
+            {'distancia_km': distancia, 'tipo': tipo, 'precio': precio},
+            status=status.HTTP_200_OK
+        )
+
+    # ------------------------------------------------------------
+    #  ENDPOINT: GANANCIAS por repartidor
+    # ------------------------------------------------------------
+    @action(detail=False, methods=['get'])
+    def ganancias(self, request):
+        """
+        Retorna el total de ganancias de un repartidor.
+        Usa request.user para identificarlo.
+        """
+        usuario = request.user
+
+        if usuario.rol != 'repartidor':
+            return Response(
+                {'error': 'Solo los repartidores pueden ver sus ganancias.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        total = calcular_ganancias_repartidor(usuario.id)
+
+        return Response(
+            {
+                'repartidor': usuario.username,
+                'ganancias_acumuladas': total
+            },
+            status=status.HTTP_200_OK
+        )
