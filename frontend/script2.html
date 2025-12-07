@@ -192,6 +192,27 @@
       } catch (error) { console.error("API Error:", error); throw error; }
     };
 
+    //----funcion api para la subida de imagenes con el back
+    const uploadImageApi = async (file, folderType) => {
+      const formData = new FormData();
+      formData.append('imagen', file);
+      formData.append('tipo', folderType); // 'perfil' o 'carnet'
+
+      try {
+        const response = await fetch(`${API_BASE_URL}/usuario/subir-imagen/`, {
+          method: 'POST',
+          body: formData, // Fetch detecta FormData y pone el Content-Type correcto automáticamente
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.detail || "Error subiendo imagen");
+        return data.url; // Retornamos la URL segura de Cloudinary
+      } catch (error) {
+        console.error("Upload Error:", error);
+        throw error;
+      }
+    };
+    //------
+
 
     // Matemáticas para la cotización en tiempo real
     const deg2rad = (deg) => deg * (Math.PI / 180);
@@ -951,59 +972,236 @@
         </div>
       );
     }
+    
+    //------funcion temporal para manejar datos del repartidor mientras se registra
+    function DriverBasicDataView({ data, onSave, onGoBack }) {
+      // Usamos estado local para el formulario, inicializado con los datos que ya existan
+      const [formData, setFormData] = useState({
+        nombre: data.nombre || "",
+        apellido: data.apellido || "",
+        correo: data.correo || "",
+        contrasena: data.contrasena || ""
+      });
 
-    function DriverWelcomeView({ onGoBack, onNavigateToProfilePhoto, onNavigateToCarnetPhoto }) { 
+      const isFormValid = formData.nombre && formData.apellido && formData.correo && formData.contrasena;
+
+      const handleSave = () => {
+        onSave(formData); // Guardamos en el estado padre
+        onGoBack(); // Volvemos al menú
+      };
+
+      return (
+        <div className="min-h-screen bg-white p-4 sm:p-8 animate-in fade-in slide-in-from-right">
+           <header className="max-w-xl mx-auto mb-8 flex items-center">
+             <button onClick={onGoBack} className="p-2 hover:bg-gray-100 rounded-full transition-colors mr-4"><ArrowLeft /></button>
+             <h2 className="text-2xl font-bold">Datos Básicos</h2>
+           </header>
+           <main className="max-w-xl mx-auto space-y-4">
+             <div>
+               <label className="block text-sm font-medium text-gray-700 mb-1">Nombre</label>
+               <input type="text" className="w-full p-3 border rounded-lg bg-gray-50" value={formData.nombre} onChange={e => setFormData({...formData, nombre: e.target.value})} placeholder="Ej. Juan" />
+             </div>
+             <div>
+               <label className="block text-sm font-medium text-gray-700 mb-1">Apellido</label>
+               <input type="text" className="w-full p-3 border rounded-lg bg-gray-50" value={formData.apellido} onChange={e => setFormData({...formData, apellido: e.target.value})} placeholder="Ej. Pérez" />
+             </div>
+             <div>
+               <label className="block text-sm font-medium text-gray-700 mb-1">Correo Institucional</label>
+               <input type="email" className="w-full p-3 border rounded-lg bg-gray-50" value={formData.correo} onChange={e => setFormData({...formData, correo: e.target.value})} placeholder="juan@espol.edu.ec" />
+             </div>
+             <div>
+               <label className="block text-sm font-medium text-gray-700 mb-1">Contraseña</label>
+               <input type="password" className="w-full p-3 border rounded-lg bg-gray-50" value={formData.contrasena} onChange={e => setFormData({...formData, contrasena: e.target.value})} placeholder="********" />
+             </div>
+             
+             <button 
+               onClick={handleSave} 
+               disabled={!isFormValid}
+               className="w-full bg-black text-white py-4 rounded-lg font-bold hover:bg-gray-800 disabled:bg-gray-300 disabled:cursor-not-allowed mt-8 transition-colors"
+             >
+               Guardar Datos
+             </button>
+           </main>
+        </div>
+      );
+    }
+
+    //------------------
+
+
+    //Funcion de pestania de registro actualizada
+    function DriverWelcomeView({ onGoBack, onNavigateToBasicData, onNavigateToProfilePhoto, onNavigateToCarnetPhoto, regData, onFinalRegister }) { 
+      // Verificamos qué pasos están completos
+      const steps = {
+        basic: regData.nombre && regData.apellido && regData.correo && regData.contrasena,
+        profile: !!regData.fotoPerfilFile, // Verificamos si existe el archivo
+        carnet: !!regData.fotoCarnetFile   // Verificamos si existe el archivo
+      };
+      
+      const allComplete = steps.basic && steps.profile && steps.carnet;
+      const [loading, setLoading] = useState(false);
+
+      const handleRegisterClick = async () => {
+         setLoading(true);
+         try {
+            await onFinalRegister();
+         } catch(e) {
+            console.error(e);
+            setLoading(false);
+         }
+      };
+
+      // Icono de Check verde o Chevron
+      const StatusIcon = ({ isDone }) => isDone 
+        ? <div className="bg-green-100 p-1 rounded-full"><Check className="w-5 h-5 text-green-600" /></div>
+        : <ChevronRight className="text-gray-400" />;
+
       return (
         <div className="min-h-screen bg-white p-4 sm:p-8 animate-in fade-in duration-300">
-          <header className="max-w-4xl mx-auto mb-12"><div className="flex items-center justify-between h-16"><button onClick={onGoBack} className="p-2 hover:bg-gray-100 rounded-full transition-colors"><ArrowLeft /></button></div></header>
+          <header className="max-w-4xl mx-auto mb-8">
+            <div className="flex items-center justify-between h-16">
+                <button onClick={onGoBack} className="p-2 hover:bg-gray-100 rounded-full transition-colors"><ArrowLeft /></button>
+            </div>
+          </header>
           <main className="max-w-4xl mx-auto">
-            <h1 className="text-5xl sm:text-6xl font-bold text-gray-900 mb-16">Te damos la bienvenida.</h1>
+            <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-4">Completa tu perfil.</h1>
+            <p className="text-gray-500 mb-12">Necesitamos estos datos para validarte como repartidor seguro.</p>
+            
             <div className="space-y-4">
-              <button onClick={onNavigateToProfilePhoto} className="w-full flex justify-between items-center p-6 border-b border-purple-200 hover:bg-purple-50 transition-colors group"><span className="text-lg font-medium text-gray-800">Foto de perfil.</span><ChevronRight /></button>
-              <button onClick={onNavigateToCarnetPhoto} className="w-full flex justify-between items-center p-6 border-b border-purple-200 hover:bg-purple-50 transition-colors group"><span className="text-lg font-medium text-gray-800">Foto del carnet estudiantil.</span><ChevronRight /></button>
+              {/* PASO 1: DATOS BÁSICOS */}
+              <button onClick={onNavigateToBasicData} className="w-full flex justify-between items-center p-6 border border-gray-100 rounded-xl shadow-sm hover:shadow-md transition-all group bg-white">
+                <div className="flex items-center gap-4">
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${steps.basic ? 'bg-black text-white' : 'bg-gray-100 text-gray-500'}`}>1</div>
+                    <div className="text-left">
+                        <span className="block text-lg font-medium text-gray-800">Datos Personales</span>
+                        <span className="text-sm text-gray-500">{steps.basic ? `${regData.nombre} ${regData.apellido}` : "Nombre, correo, contraseña"}</span>
+                    </div>
+                </div>
+                <StatusIcon isDone={steps.basic} />
+              </button>
+
+              {/* PASO 2: FOTO DE PERFIL */}
+              <button onClick={onNavigateToProfilePhoto} className="w-full flex justify-between items-center p-6 border border-gray-100 rounded-xl shadow-sm hover:shadow-md transition-all group bg-white">
+                <div className="flex items-center gap-4">
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${steps.profile ? 'bg-black text-white' : 'bg-gray-100 text-gray-500'}`}>2</div>
+                    <div className="text-left">
+                        <span className="block text-lg font-medium text-gray-800">Foto de Perfil</span>
+                        <span className="text-sm text-gray-500">{steps.profile ? "Foto cargada" : "Para que te reconozcan"}</span>
+                    </div>
+                </div>
+                <StatusIcon isDone={steps.profile} />
+              </button>
+
+              {/* PASO 3: FOTO CARNET */}
+              <button onClick={onNavigateToCarnetPhoto} className="w-full flex justify-between items-center p-6 border border-gray-100 rounded-xl shadow-sm hover:shadow-md transition-all group bg-white">
+                <div className="flex items-center gap-4">
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${steps.carnet ? 'bg-black text-white' : 'bg-gray-100 text-gray-500'}`}>3</div>
+                    <div className="text-left">
+                        <span className="block text-lg font-medium text-gray-800">Foto del Carnet</span>
+                        <span className="text-sm text-gray-500">{steps.carnet ? "Credencial cargada" : "Validación de estudiante"}</span>
+                    </div>
+                </div>
+                <StatusIcon isDone={steps.carnet} />
+              </button>
+            </div>
+
+            <div className="mt-12 border-t pt-8">
+                <button 
+                    onClick={handleRegisterClick}
+                    disabled={!allComplete || loading}
+                    className="w-full py-4 rounded-xl font-bold text-lg transition-all transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed bg-black text-white shadow-xl hover:bg-gray-900"
+                >
+                    {loading ? "Subiendo datos..." : "Finalizar Registro"}
+                </button>
+                {!allComplete && <p className="text-center text-xs text-gray-400 mt-2">Completa los 3 pasos para activar el botón</p>}
+            </div>
+          </main>
+        </div>
+      );
+    }
+
+    //----------------
+
+    // Actualizacion de la funcion de subida de foto del carnet
+    function CarnetPhotoUploadView({ onGoBack, onSave }) {
+      const fileInputRef = useRef(null);
+      const [fileName, setFileName] = useState(null);
+      
+      const handleUploadClick = () => fileInputRef.current.click();
+      const handleFileSelect = (event) => { 
+          const file = event.target.files[0]; 
+          if (file) {
+              setFileName(file.name);
+              // Automáticamente guardamos y volvemos 
+              if(confirm(`¿Usar ${file.name}?`)) {
+                 onSave(file);
+              }
+          } 
+      };
+      
+      return (
+        <div className="min-h-screen bg-pink-50 p-4 sm:p-8 animate-in fade-in duration-300">
+          <header className="max-w-xl mx-auto mb-8 flex justify-between items-center"><button onClick={onGoBack} className="p-2 hover:bg-gray-100 rounded-full transition-colors"><ArrowLeft /></button></header>
+          <main className="max-w-xl mx-auto">
+            <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-6">Sube foto de credencial.</h1>
+            <div className="w-full flex justify-center mb-8"><div className="w-full max-w-sm h-48 bg-gray-300 rounded-xl flex items-center justify-center border-4 border-dashed border-gray-400"><IdCard className="w-40 h-40 text-gray-500" /></div></div>
+            <div className="space-y-4">
+                <input type="file" ref={fileInputRef} onChange={handleFileSelect} style={{ display: "none" }} accept="image/*" />
+                <button onClick={handleUploadClick} className="w-full bg-gray-800 text-white py-4 rounded-lg font-medium hover:bg-black transition-colors">Seleccionar Archivo</button>
+            </div>
+          </main>
+        </div>
+      );
+    }
+    //-----------
+
+
+    //actualizacion de la funcion de subida de  foto de perfil
+    function ProfilePhotoUploadView({ onGoBack, onSave }) {
+      const [stream, setStream] = useState(null); 
+      const [error, setError] = useState(null); 
+      const videoRef = useRef(null); 
+
+      const handleStartCamera = async () => { setError(null); try { const s = await navigator.mediaDevices.getUserMedia({ video: true, audio: false }); setStream(s); } catch (err) { console.error(err); setError("No cámara."); } };
+      
+      useEffect(() => { if (stream && videoRef.current) { videoRef.current.srcObject = stream; } return () => { if (stream) { stream.getTracks().forEach(track => track.stop()); } }; }, [stream]); 
+      
+      const handleCapture = () => {
+         if(!videoRef.current) return;
+         // Crear canvas para capturar frame
+         const canvas = document.createElement("canvas");
+         canvas.width = videoRef.current.videoWidth;
+         canvas.height = videoRef.current.videoHeight;
+         canvas.getContext('2d').drawImage(videoRef.current, 0, 0);
+         
+         // Convertir a archivo (Blob)
+         canvas.toBlob((blob) => {
+             const file = new File([blob], "perfil_camara.jpg", { type: "image/jpeg" });
+             onSave(file); // Enviamos al padre
+         }, 'image/jpeg');
+      };
+
+      return (
+        <div className="min-h-screen bg-pink-50 p-4 sm:p-8 animate-in fade-in duration-300">
+          <header className="max-w-xl mx-auto mb-8 flex justify-between items-center"><button onClick={onGoBack} className="p-2 hover:bg-gray-100 rounded-full transition-colors"><ArrowLeft /></button></header>
+          <main className="max-w-xl mx-auto">
+            <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-6">Foto de perfil.</h1>
+            <div className="w-full flex justify-center mb-8"><div className="w-56 h-56 bg-gray-300 rounded-full flex items-center justify-center overflow-hidden border-4 border-white shadow-lg">{stream ? (<video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover transform -scale-x-100" />) : (<User className="w-32 h-32 text-gray-500" />)}</div></div>
+            {error && (<div className="text-center text-red-600 font-medium mb-4">{error}</div>)}
+            <div className="space-y-4">
+                {stream ? (
+                    <button onClick={handleCapture} className="w-full bg-black text-white py-4 rounded-lg font-bold hover:bg-gray-800 transition-colors">Capturar y Guardar</button>
+                ) : (
+                    <button onClick={handleStartCamera} className="w-full bg-gray-800 text-white py-4 rounded-lg font-medium hover:bg-black transition-colors">Abrir Cámara</button>
+                )}
             </div>
           </main>
         </div>
       );
     }
     
-    function CarnetPhotoUploadView({ onGoBack }) {
-      const fileInputRef = useRef(null);
-      const [fileName, setFileName] = useState(null);
-      const handleUploadClick = () => fileInputRef.current.click();
-      const handleFileSelect = (event) => { const file = event.target.files[0]; if (file) setFileName(file.name); };
-      return (
-        <div className="min-h-screen bg-pink-50 p-4 sm:p-8 animate-in fade-in duration-300">
-          <header className="max-w-xl mx-auto mb-8 flex justify-between items-center"><button onClick={onGoBack} className="p-2 hover:bg-gray-100 rounded-full transition-colors"><ArrowLeft /></button><button className="flex items-center gap-2 px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-black transition-colors"><HelpCircle /><span className="text-sm font-medium">Ayuda</span></button></header>
-          <main className="max-w-xl mx-auto">
-            <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-6">Tomate una foto al carnet estudiantil.</h1>
-            <p className="text-gray-700 mb-6">Toma una foto de tu carné estudiantil de la ESPOL.</p>
-            <div className="w-full flex justify-center mb-8"><div className="w-full max-w-sm h-48 bg-gray-300 rounded-xl flex items-center justify-center border-4 border-dashed border-gray-400"><IdCard className="w-40 h-40 text-gray-500" /></div></div>
-            <div className="space-y-4"><input type="file" ref={fileInputRef} onChange={handleFileSelect} style={{ display: "none" }} accept="image/*" /><button onClick={handleUploadClick} className="w-full bg-gray-800 text-white py-4 rounded-lg font-medium hover:bg-black transition-colors">{fileName ? `Cargar foto: ${fileName}` : "Cargar foto"}</button></div>
-          </main>
-        </div>
-      );
-    }
+    // -----------
 
-    function ProfilePhotoUploadView({ onGoBack }) {
-      const [stream, setStream] = useState(null); 
-      const [error, setError] = useState(null); 
-      const videoRef = useRef(null); 
-      const handleStartCamera = async () => { setError(null); try { const s = await navigator.mediaDevices.getUserMedia({ video: true, audio: false }); setStream(s); } catch (err) { console.error("Error accessing camera: ", err); setError("No se pudo acceder a la cámara."); } };
-      useEffect(() => { if (stream && videoRef.current) { videoRef.current.srcObject = stream; } return () => { if (stream) { stream.getTracks().forEach(track => track.stop()); } }; }, [stream]); 
-      return (
-        <div className="min-h-screen bg-pink-50 p-4 sm:p-8 animate-in fade-in duration-300">
-          <header className="max-w-xl mx-auto mb-8 flex justify-between items-center"><button onClick={onGoBack} className="p-2 hover:bg-gray-100 rounded-full transition-colors"><ArrowLeft /></button><button className="flex items-center gap-2 px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-black transition-colors"><HelpCircle /><span className="text-sm font-medium">Ayuda</span></button></header>
-          <main className="max-w-xl mx-auto">
-            <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-6">Tomate una foto de perfil.</h1>
-            <div className="w-full flex justify-center mb-8"><div className="w-56 h-56 bg-gray-300 rounded-full flex items-center justify-center overflow-hidden">{stream ? (<video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover transform -scale-x-100" />) : (<User className="w-32 h-32 text-gray-500" />)}</div></div>
-            {error && (<div className="text-center text-red-600 font-medium mb-4">{error}</div>)}
-            <div className="space-y-4">{stream ? (<button className="w-full bg-gray-800 text-white py-4 rounded-lg font-medium hover:bg-black transition-colors">Capturar foto</button>) : (<button onClick={handleStartCamera} className="w-full bg-gray-800 text-white py-4 rounded-lg font-medium hover:bg-black transition-colors">Tomar foto</button>)}</div>
-          </main>
-        </div>
-      );
-    }
-    
     function ActiveOrderView({ orderId, userRole, onGoBack }) {
         const [order, setOrder] = useState(null);
         useEffect(() => {
@@ -1240,6 +1438,51 @@
       const [nombre, setNombre] = useState("");
       const [apellido, setApellido] = useState("");
 
+      // --- funcion para el boton de enviar final y ESTADO PARA EL REGISTRO DE REPARTIDOR ---
+      const [driverRegData, setDriverRegData] = useState({
+          nombre: "", apellido: "", correo: "", contrasena: "",
+          fotoPerfilFile: null, 
+          fotoCarnetFile: null
+      });
+
+
+      const handleFinalDriverRegister = async () => {
+          try {
+              // 1. Subir Foto Perfil
+              const urlPerfil = await uploadImageApi(driverRegData.fotoPerfilFile, 'perfil');
+              
+              // 2. Subir Foto Carnet
+              const urlCarnet = await uploadImageApi(driverRegData.fotoCarnetFile, 'carnet');
+
+              // 3. Crear Usuario
+              const payload = {
+                  nombre: driverRegData.nombre,
+                  apellido: driverRegData.apellido,
+                  correo: driverRegData.correo,
+                  contrasena: driverRegData.contrasena,
+                  rol: "repartidor",
+                  foto_perfil: urlPerfil,
+                  foto_carnet: urlCarnet
+                  // Opcionales: telefono, etc.
+              };
+
+              await apiCall("/usuario/crear/", "POST", payload);
+              
+              alert("Registro completado exitosamente! Ahora inicia sesión.");
+              // Limpiar formulario y enviar a login
+              setDriverRegData({ nombre: "", apellido: "", correo: "", contrasena: "", fotoPerfilFile: null, fotoCarnetFile: null });
+              setAuthMode("signin");
+              setShowAuthModal(true);
+              setCurrentView("home");
+
+          } catch (error) {
+              alert("Error en el registro: " + error.message);
+              throw error; // Para que el botón de carga se detenga en la vista hija
+          }
+      };
+
+      //-------
+
       useEffect(() => {
         const checkStatus = async () => {
             if (!currentUser || !isLoggedIn) return;
@@ -1327,14 +1570,53 @@
       if (currentView === "sendReceive") { return <SendReceiveView onGoBack={() => setCurrentView("newFavor")} onNavigateToFastPrints={() => setCurrentView("fastPrints")} onNavigateToBuyTake={() => setCurrentView("buyTake")} />; }
       if (currentView === "fastPrints") { return <FastPrintsView onGoBack={() => setCurrentView("newFavor")} onNavigateToSendReceive={() => setCurrentView("sendReceive")} onNavigateToBuyTake={() => setCurrentView("buyTake")} />; }
       if (currentView === "buyTake") { return <BuyTakeView onGoBack={() => setCurrentView("newFavor")} onNavigateToSendReceive={() => setCurrentView("sendReceive")} onNavigateToFastPrints={() => setCurrentView("fastPrints")} />; }
-      if (currentView === "driverRegister") { return <DriverRegisterView onGoBack={() => setCurrentView("home")} onNavigateToWelcome={() => setCurrentView("driverWelcome")} onSignIn={() => { setAuthMode("signin"); setShowAuthModal(true); }} onRegister={() => { setAuthMode("register"); setShowAuthModal(true); }} />; }
-      if (currentView === "driverWelcome") { return <DriverWelcomeView onGoBack={() => setCurrentView("driverRegister")} onNavigateToProfilePhoto={() => setCurrentView("profilePhotoUpload")} onNavigateToCarnetPhoto={() => setCurrentView("carnetPhotoUpload")} />; }
-      if (currentView === "profilePhotoUpload") { return <ProfilePhotoUploadView onGoBack={() => setCurrentView("driverWelcome")} />; }
-      if (currentView === "carnetPhotoUpload") { return <CarnetPhotoUploadView onGoBack={() => setCurrentView("driverWelcome")} />; }
       if (currentView === "help") { return renderHelpView(); }
       if (currentView === "activeOrder") { return <ActiveOrderView orderId={activeOrderId} userRole={currentUser?.rol} onGoBack={() => { setIgnoredOrderId(activeOrderId); setCurrentView("home"); }} />; }
       if (currentView === "driverFeed") { return <DriverFeedView onGoBack={() => setCurrentView("home")} onNavigateToActiveOrder={(id) => { setActiveOrderId(id); setCurrentView("activeOrder"); }} />; }
       if (currentView === "myOrders") { return <MyOrdersView onGoBack={() => setCurrentView("home")} currentUserId={currentUser?.id} onNavigateToActiveOrder={(id) => { setActiveOrderId(id); setCurrentView("activeOrder"); }} />; }
+      // Actualizacion y aniadidos de renders del registro del repartidor
+      if (currentView === "driverRegister") { return <DriverRegisterView onGoBack={() => setCurrentView("home")} onNavigateToWelcome={() => setCurrentView("driverWelcome")} onSignIn={() => { setAuthMode("signin"); setShowAuthModal(true); }} onRegister={() => { setCurrentView("driverWelcome"); /* Vamos directo al flujo nuevo */ }} />; }
+      if (currentView === "driverWelcome") { 
+          return <DriverWelcomeView 
+              onGoBack={() => setCurrentView("driverRegister")} 
+              regData={driverRegData}
+              onNavigateToBasicData={() => setCurrentView("driverBasicData")}
+              onNavigateToProfilePhoto={() => setCurrentView("profilePhotoUpload")} 
+              onNavigateToCarnetPhoto={() => setCurrentView("carnetPhotoUpload")} 
+              onFinalRegister={handleFinalDriverRegister}
+          />; 
+      }
+      if (currentView === "driverBasicData") {
+          return <DriverBasicDataView 
+              data={driverRegData}
+              onSave={(newData) => setDriverRegData(prev => ({ ...prev, ...newData }))}
+              onGoBack={() => setCurrentView("driverWelcome")}
+          />;
+      }
+      if (currentView === "profilePhotoUpload") { 
+          return <ProfilePhotoUploadView 
+            onGoBack={() => setCurrentView("driverWelcome")} 
+            onSave={(file) => {
+                setDriverRegData(prev => ({...prev, fotoPerfilFile: file}));
+                setCurrentView("driverWelcome");
+            }}
+          />; 
+      }
+      if (currentView === "carnetPhotoUpload") { 
+          return <CarnetPhotoUploadView 
+            onGoBack={() => setCurrentView("driverWelcome")} 
+            onSave={(file) => {
+                setDriverRegData(prev => ({...prev, fotoCarnetFile: file}));
+                setCurrentView("driverWelcome");
+            }}
+          />; 
+      }
+      // -----------
+
+
+      
+
+
 
       return (
         <div className="min-h-screen bg-gray-50">
