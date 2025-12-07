@@ -44,7 +44,7 @@ class Usuario(AbstractUser):
         choices=ESTADOS_VERIFICACION, 
         default='Pendiente' # por default todo usuario en pendiente
     )
-
+    disponible = models.BooleanField(default=False)
     #metodos
     def __str__(self):
         return f"{self.email} ({self.rol}) - {self.estado_verificacion}"

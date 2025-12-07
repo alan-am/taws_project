@@ -2,6 +2,11 @@
 from django.urls import path
 from rest_framework import routers
 from .api import PedidoViewSet
+from .api import PedidoViewSet, GananciasRepartidorView
+
+router = routers.DefaultRouter()
+router.register('crear', PedidoViewSet, 'pedidos')
+
 
 
 urlpatterns = [
@@ -62,4 +67,9 @@ urlpatterns = [
         PedidoViewSet.as_view({'delete': 'destroy'}),
         name='pedido-eliminar'
     ),
+    path(
+            'api/pedido/ganancias/', 
+            GananciasRepartidorView.as_view(), 
+            name='ganancias-repartidor'
+        ),
 ]

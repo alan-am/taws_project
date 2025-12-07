@@ -166,3 +166,22 @@ class PedidoViewSet(viewsets.ModelViewSet):
             },
             status=status.HTTP_200_OK
         )
+    
+
+    # --- AGREGA ESTO AL FINAL DE backend/pedidos/api.py ---
+
+# Importaciones necesarias para la nueva vista
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
+
+class GananciasRepartidorView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        # Aquí conectaremos la lógica real más adelante.
+        # Por ahora devolvemos 0 para que el Dashboard funcione.
+        return Response({
+            "ganancias_acumuladas": 0.0,
+            "pedidos_completados": 0
+        })

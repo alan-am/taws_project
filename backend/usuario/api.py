@@ -122,3 +122,4 @@ class UsuarioViewSet(viewsets.ModelViewSet):
                 {'error': f'Error al subir imagen: {str(e)}'}, 
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+        

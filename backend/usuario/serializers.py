@@ -32,7 +32,8 @@ class UsuarioSerializer(serializers.ModelSerializer):
             'foto_perfil',   
             'foto_carnet',   
             'contrasena',   
-            'estado_verificacion'   
+            'estado_verificacion',
+            'disponible',
         ]
         #verificacion en solo lectura
         read_only_fields = ['estado_verificacion'] 
