@@ -268,3 +268,27 @@ Permite modificar campos generales de un pedido (ej. corregir descripción). No 
 * **Permisos:** `IsAuthenticated` (Requiere token)
 * **Respuesta Exitosa (204 No Content):**
     * No se devuelve ningún contenido en el cuerpo de la respuesta.
+
+---
+
+##  GET /pedidos/calcular_precio/
+Calcula el precio dinámico de un pedido utilizando la fórmula implementada en el backend.  
+Este servicio reemplaza el precio fijo por una estructura basada en variables reales.
+
+###  Parámetros (query)
+| Parámetro | Tipo | Obligatorio | Descripción |
+|----------|------|-------------|-------------|
+| distancia | float | Sí | Distancia total del recorrido en kilómetros. |
+| tipo_favor | string | Sí | Tipo de pedido. Ej: "normal", "pesado", etc. |
+| tarifa_base | float | Sí | Tarifa mínima establecida por la plataforma. |
+
+###  Ejemplo de petición
+
+###  Respuesta exitosa 
+```json
+{
+    "distancia": 2.5,
+    "tipo_favor": "normal",
+    "tarifa_base": 0.5,
+    "costo_total": 1.87
+}
