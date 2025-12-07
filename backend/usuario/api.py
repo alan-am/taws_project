@@ -2,6 +2,7 @@
 from .models import Usuario
 from rest_framework import viewsets, permissions, status
 import cloudinary.uploader
+import uuid
 from rest_framework.parsers import MultiPartParser, FormParser
 from .serializers import UsuarioSerializer, ImagenUploadSerializer
 from rest_framework.decorators import action
@@ -15,17 +16,18 @@ class UsuarioViewSet(viewsets.ModelViewSet):
 
     def get_permissions(self):
         """
-        AllowAny  para la acción creacion de usuarios(POST),
-        IsAuthenticated' para todos los demás.
+        Define los permisos según la acción.
         """
-        if self.action == 'create':
+        # Acciones PÚBLICAS 
+        if self.action in ['create', 'subir_imagen']: 
             permission_classes = [permissions.AllowAny]
 
+        # Acciones de ADMIN
         elif self.action in ['pendientes', 'gestionar_verificacion']:
-            # Solo el ADMIN puede ver pendientes o aprobar gente
             permission_classes = [IsAdminRol]
+            
+        # 3. Resto requiere Logueo
         else:
-            # Para lo demás (listar, perfil, editar), usuario logueado
             permission_classes = [permissions.IsAuthenticated]
             
         return [permission() for permission in permission_classes]
@@ -83,47 +85,36 @@ class UsuarioViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['post'], url_path='subir-imagen', parser_classes=[MultiPartParser, FormParser])
     def subir_imagen(self, request):
         """
-        Sube una imagen a Cloudinary y actualiza la URL en el perfil del usuario.
-        Ejemplo json (form-data): 
-            - imagen: (archivo)
-            - tipo: 'perfil' o 'carnet'
+        Sube una imagen a Cloudinary y retorna su URL.
+        No requiere autenticación ni actualiza ningún usuario.
         """
-        usuario = request.user # Usuario autenticado
-        
-        # 1. Validar datos de entrada
+        # Validar que venga una imagen y el tipo
         serializer = ImagenUploadSerializer(data=request.data)
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
         imagen = serializer.validated_data['imagen']
-        tipo = serializer.validated_data['tipo']
+        tipo = serializer.validated_data['tipo'] # 'perfil' o 'carnet'
 
         try:
-            # Subir a cloudinary
-            # guardamos la foto en una carpeta de cloudinary(para tener mas ordenado)
+            # Generar un nombre único para el archivo (ya que no tenemos ID de usuario)
+            nombre_archivo = f"img_{uuid.uuid4()}"
+
+            #  Subir a Cloudinary
             upload_result = cloudinary.uploader.upload(
                 imagen, 
-                folder=f"polipedidos/usuarios/{tipo}",
-                public_id=f"user_{usuario.id}_{tipo}"
+                folder=f"polipedidos/uploads/{tipo}", # Carpeta genérica de subidas
+                public_id=nombre_archivo
             )
             
-            # url directa de la imagen
+            # Obtener URL
             url_imagen = upload_result.get('secure_url')
 
-            #actua de la info del usuario
-            if tipo == 'perfil':
-                usuario.foto_perfil = url_imagen
-            elif tipo == 'carnet':
-                usuario.foto_carnet = url_imagen
-                # si la foto del carnet cambia el estado del usuario pasa a pendiente nuevamente.
-                usuario.estado_verificacion = 'Pendiente' 
-            
-            usuario.save()
-
+            # Retornar la URL (El frontend la usará luego en el registro)
             return Response({
                 'mensaje': 'Imagen subida exitosamente',
-                'tipo': tipo,
-                'url': url_imagen
+                'url': url_imagen,
+                'tipo': tipo
             }, status=status.HTTP_200_OK)
 
         except Exception as e:
