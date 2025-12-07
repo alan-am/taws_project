@@ -157,12 +157,19 @@ class PedidoViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_403_FORBIDDEN
             )
 
+        # ✅ AGREGADO: Contar pedidos completados
+        pedidos_completados = Pedidos.objects.filter(
+            idRepartidor=usuario,
+            estado='Entregado'
+        ).count()
+        
         total = calcular_ganancias_repartidor(usuario.id)
 
         return Response(
             {
                 'repartidor': usuario.username,
-                'ganancias_acumuladas': total
+                'ganancias_acumuladas': total,
+                'pedidos_completados': pedidos_completados  # ✅ NUEVO CAMPO
             },
             status=status.HTTP_200_OK
         )

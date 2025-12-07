@@ -836,16 +836,19 @@
               }
               setDistanciaKm(dist);
 
-              // Llamada a tu API nueva
               try {
                   const data = await apiCall(`/pedido/precio_dinamico/?distancia=${dist}&tipo=normal`);
                   setPrecioEstimado(data.precio);
               } catch (e) {
                   console.error("Error calculando precio:", e);
+                  // ✅ FALLBACK: Calcular localmente si el backend falla
+                  const TARIFA_BASE = 0.50;
+                  const COSTO_POR_KM = 0.40;
+                  const precioLocal = TARIFA_BASE + (dist * COSTO_POR_KM);
+                  setPrecioEstimado(precioLocal);
               }
           };
           
-          // Espera 500ms a que termines de escribir/seleccionar para no saturar
           const timer = setTimeout(calcular, 500);
           return () => clearTimeout(timer);
 
@@ -956,28 +959,41 @@ function FastPrintsView({ onGoBack, onNavigateToSendReceive, onNavigateToBuyTake
       const [totalPagar, setTotalPagar] = useState(0);
       
       // --- CÁLCULO EN TIEMPO REAL ---
+// --- CÁLCULO EN TIEMPO REAL ---
       useEffect(() => {
-          // 1. Calcular Distancia
-          const coord1 = parseCoordinates(recogida);
-          const coord2 = parseCoordinates(entrega);
-          let dist = 0;
-          if (coord1 && coord2) {
-              dist = getDistanceFromLatLonInKm(coord1.lat, coord1.lng, coord2.lat, coord2.lng);
-          } else if (recogida && entrega) {
-              dist = 1.0; // Distancia default si es texto
-          }
-          setDistanciaKm(dist);
+          const calcularPrecio = async () => {
+              // 1. Calcular Distancia
+              const coord1 = parseCoordinates(recogida);
+              const coord2 = parseCoordinates(entrega);
+              let dist = 0;
+              if (coord1 && coord2) {
+                  dist = getDistanceFromLatLonInKm(coord1.lat, coord1.lng, coord2.lat, coord2.lng);
+              } else if (recogida && entrega) {
+                  dist = 1.0;
+              }
+              setDistanciaKm(dist);
 
-          // 2. Calcular Precio (Envío + Impresión)
-          // Fórmula Envío: Base $0.50 + $0.25 por Km
-          const precioEnvio = 0.50 + (dist * 0.25);
-          
-          // Fórmula Impresión: $0.10 (B/N) o $0.25 (Color) por copia
-          const precioCopia = color === "Color" ? 0.25 : 0.10;
-          const totalImpresion = parseInt(copies || 0) * precioCopia;
+              // 2. Calcular Precio de Envío (usar backend)
+              let precioEnvio = 0;
+              try {
+                  const data = await apiCall(`/pedido/precio_dinamico/?distancia=${dist}&tipo=normal`);
+                  precioEnvio = data.precio;
+              } catch (e) {
+                  console.error("Error calculando precio envío:", e);
+                  // Fallback local
+                  precioEnvio = 0.50 + (dist * 0.40);
+              }
+              
+              // 3. Calcular Precio de Impresión
+              const precioCopia = color === "Color" ? 0.25 : 0.10;
+              const totalImpresion = parseInt(copies || 0) * precioCopia;
 
-          setCostoEnvio(precioEnvio);
-          setTotalPagar(precioEnvio + totalImpresion);
+              setCostoEnvio(precioEnvio);
+              setTotalPagar(precioEnvio + totalImpresion);
+          };
+
+          const timer = setTimeout(calcularPrecio, 500);
+          return () => clearTimeout(timer);
 
       }, [recogida, entrega, copies, color]);
 
@@ -1111,21 +1127,35 @@ function FastPrintsView({ onGoBack, onNavigateToSendReceive, onNavigateToBuyTake
 
       // --- CÁLCULO EN TIEMPO REAL ---
       useEffect(() => {
-          // 1. Calcular Distancia
-          const coord1 = parseCoordinates(storeAddress);
-          const coord2 = parseCoordinates(deliveryPoint);
-          let dist = 0;
-          if (coord1 && coord2) {
-              dist = getDistanceFromLatLonInKm(coord1.lat, coord1.lng, coord2.lat, coord2.lng);
-          } else if (storeAddress && deliveryPoint) {
-              dist = 1.0; 
-          }
-          setDistanciaKm(dist);
+          const calcularPrecio = async () => {
+              // 1. Calcular Distancia
+              const coord1 = parseCoordinates(storeAddress);
+              const coord2 = parseCoordinates(deliveryPoint);
+              let dist = 0;
+              if (coord1 && coord2) {
+                  dist = getDistanceFromLatLonInKm(coord1.lat, coord1.lng, coord2.lat, coord2.lng);
+              } else if (storeAddress && deliveryPoint) {
+                  dist = 1.0; 
+              }
+              setDistanciaKm(dist);
 
-          // 2. Calcular Envío (Tarifa un poco más alta por ser compras: Base $0.75 + $0.30/km)
-          const tarifaEnvio = 0.75 + (dist * 0.30);
-          setCostoEnvio(tarifaEnvio);
-          setTotalFinal(totalProductos + tarifaEnvio);
+              // 2. Calcular Envío (usar backend con tipo "pesado")
+              let tarifaEnvio = 0;
+              try {
+                  const data = await apiCall(`/pedido/precio_dinamico/?distancia=${dist}&tipo=pesado`);
+                  tarifaEnvio = data.precio;
+              } catch (e) {
+                  console.error("Error calculando precio envío:", e);
+                  // Fallback: Base más alta para compras
+                  tarifaEnvio = 0.75 + (dist * 0.30);
+              }
+              
+              setCostoEnvio(tarifaEnvio);
+              setTotalFinal(totalProductos + tarifaEnvio);
+          };
+
+          const timer = setTimeout(calcularPrecio, 500);
+          return () => clearTimeout(timer);
 
       }, [storeAddress, deliveryPoint, totalProductos]);
 
@@ -1765,6 +1795,14 @@ function FastPrintsView({ onGoBack, onNavigateToSendReceive, onNavigateToBuyTake
       }, [currentUser]); // Se ejecuta cada vez que cambia el usuario (y su disponibilidad)
 
       const fetchData = async () => {
+          // ✅ NUEVO: Verificar estado de aprobación
+          if (currentUser?.estado_verificacion !== 'Aprobado') {
+              setOrders([]);
+              setMyStats({ ganancia: "0.00", completados: 0 });
+              alert("⚠️ Tu cuenta está pendiente de aprobación por un administrador.");
+              return;
+          }
+          
           setLoading(true);
           try {
               const disponibles = await apiCall("/pedido/publicados/");
@@ -1775,13 +1813,18 @@ function FastPrintsView({ onGoBack, onNavigateToSendReceive, onNavigateToBuyTake
                       const stats = await apiCall("/pedido/ganancias/");
                       setMyStats({
                           ganancia: stats.ganancias_acumuladas.toFixed(2),
-                          completados: "N/A"
+                          completados: stats.pedidos_completados || 0  // ✅ CORREGIDO
                       });
                   } catch(e) {
                       console.warn("No se pudieron cargar ganancias:", e);
+                      setMyStats({ ganancia: "0.00", completados: 0 });
                   }
               }
-          } catch (error) { console.error(error); } finally { setLoading(false); }
+          } catch (error) { 
+              console.error(error); 
+          } finally { 
+              setLoading(false); 
+          }
       };
 
       // NOTA: Eliminamos 'handleToggleOnline' local porque estaba rota. 
@@ -1862,7 +1905,15 @@ function FastPrintsView({ onGoBack, onNavigateToSendReceive, onNavigateToBuyTake
                 <div className={`space-y-4 transition-all duration-500 ${!isOnline ? 'opacity-20 pointer-events-none' : 'opacity-100'}`}>
                     {orders.length === 0 ? (
                         <div className="text-center py-16 bg-white rounded-xl border border-gray-100 shadow-sm">
-                            <p className="text-gray-400">No hay pedidos pendientes.</p>
+                            {currentUser?.estado_verificacion !== 'Aprobado' ? (
+                                <>
+                                    <div className="text-6xl mb-4">⏳</div>
+                                    <p className="text-gray-800 font-bold mb-2">Cuenta en Revisión</p>
+                                    <p className="text-gray-500 text-sm">Un administrador está verificando tu identidad.</p>
+                                </>
+                            ) : (
+                                <p className="text-gray-400">No hay pedidos disponibles en este momento.</p>
+                            )}
                         </div>
                     ) : (
                         orders.map(order => (
@@ -2050,42 +2101,58 @@ function FastPrintsView({ onGoBack, onNavigateToSendReceive, onNavigateToBuyTake
 
       const handleFinalDriverRegister = async () => {
           try {
-              // 1. Validar que tengamos las fotos
-              if (!driverRegData.fotoPerfilFile || !driverRegData.fotoCarnetFile) {
-                  alert("Faltan fotos por cargar.");
+              // ✅ VALIDACIÓN COMPLETA
+              if (!driverRegData.nombre || !driverRegData.apellido) {
+                  alert("⚠️ Completa tus datos personales primero.");
+                  return;
+              }
+              if (!driverRegData.correo || !driverRegData.contrasena) {
+                  alert("⚠️ Falta correo o contraseña.");
+                  return;
+              }
+              if (!driverRegData.fotoPerfilFile) {
+                  alert("⚠️ Falta foto de perfil.");
+                  return;
+              }
+              if (!driverRegData.fotoCarnetFile) {
+                  alert("⚠️ Falta foto del carnet estudiantil.");
                   return;
               }
 
-              // 2. Subir Foto Perfil a Cloudinary
+              // Mostrar indicador de carga
+              alert("📤 Subiendo imágenes a la nube...");
+
+              // 1. Subir Foto Perfil a Cloudinary
               const urlPerfil = await uploadToCloudinary(driverRegData.fotoPerfilFile, 'perfil');
               
-              // 3. Subir Foto Carnet a Cloudinary
+              // 2. Subir Foto Carnet a Cloudinary
               const urlCarnet = await uploadToCloudinary(driverRegData.fotoCarnetFile, 'carnet');
 
-              // 4. Crear Usuario en Backend con las URLs reales
+              // 3. Crear Usuario en Backend con las URLs reales
               const payload = {
                   nombre: driverRegData.nombre,
                   apellido: driverRegData.apellido,
                   correo: driverRegData.correo,
                   contrasena: driverRegData.contrasena,
                   rol: "repartidor",
-                  foto_perfil: urlPerfil,  // URL real
-                  foto_carnet: urlCarnet,  // URL real
-                  estado_verificacion: "Pendiente" // Se crea como pendiente
+                  foto_perfil: urlPerfil,
+                  foto_carnet: urlCarnet,
               };
 
               await apiCall("/usuario/crear/", "POST", payload);
               
-              alert("✅ Registro completado exitosamente! Ahora inicia sesión.");
+              alert("✅ Registro completado! Tu cuenta será revisada por un administrador. Te notificaremos por correo cuando sea aprobada.");
               
               // Limpiar y redirigir
-              setDriverRegData({ nombre: "", apellido: "", correo: "", contrasena: "", fotoPerfilFile: null, fotoCarnetFile: null });
-              setAuthMode("signin");
-              setShowAuthModal(true);
+              setDriverRegData({ 
+                  nombre: "", apellido: "", correo: "", contrasena: "", 
+                  fotoPerfilFile: null, fotoCarnetFile: null 
+              });
               setCurrentView("home");
 
           } catch (error) {
-              alert("Error en el registro: " + error.message);
+              console.error("Error completo:", error);
+              alert("❌ Error en el registro: " + error.message);
           }
       };
 
