@@ -143,8 +143,124 @@ Estado actual: Funcional. Llama a la API PATCH para guardar cambios, pero falta 
 ¿Qué sigue?
 Para que estas dejen de ser "esqueletos" y cobren vida completa, los siguientes pasos lógicos serían (cuando estés listo para tocar el backend):
 
-WebSockets (Django Channels): Para que IncomingOrderModal aparezca sola.
 
-Endpoint de Métricas: Para que el DriverProfileView muestre ganancias reales.
 
-Gestión de Estado del Repartidor: Un campo is_active o disponible en el modelo Usuario para guardar el estado del interruptor del menú.
+🚀 Documentación de Nuevas Vistas (Frontend)
+
+Este documento detalla las nuevas interfaces implementadas en frontend/script2.html, enfocándose en el diseño visual y la lógica de presentación pendiente de conexión con el backend.
+
+1. 🔔 Modal "Nuevo Pedido" (IncomingOrderModal)
+
+Esta es la ventana emergente crítica que ve el repartidor cuando el sistema le asigna un pedido o detecta uno cercano disponible.
+
+🎨 Diseño y Elementos Visuales
+
+El diseño sigue una estética de tarjeta flotante limpia y moderna:
+
+Título: "Nuevo Pedido." en negrita, centrado.
+
+Tarjeta de Tarifas (Gris):
+
+Tarifa por arrancar: Monto fijo para el repartidor (ej. $0.25).
+
+Envío por distancia: Cálculo dinámico basado en la ruta (ej. $2.75).
+
+Total: Suma total que el repartidor cobrará al cliente (ej. $3.00).
+
+Detalles de Ruta:
+
+[Icono Persona] Recogida: Lugar donde se busca el paquete/pedido (ej. "FCI").
+
+[Icono Ubicación] Entrega: Destino final (ej. "Rectorado").
+
+Descripción: Nota del cliente (ej. "Traer cambio de $20").
+
+Acciones:
+
+Confirmar (Negro): Acepta el pedido y cambia el estado a "En curso".
+
+Cancelar (Negro): Rechaza la oferta y cierra el modal.
+
+⚙️ Lógica Implementada (Frontend)
+
+Activación: Actualmente se activa mediante el botón de depuración "🔔 Simular Push" en la vista DriverFeedView.
+
+Cálculo de Costos:
+
+La vista recibe el objeto order completo.
+
+Calcula visualmente el desglose: Envío por distancia = Total - Tarifa Base.
+
+Datos Dinámicos: Muestra los punto_origen_id y punto_destino_id reales del objeto pedido.
+
+🔗 Pendiente de Backend
+
+WebSockets: Conectar a un canal de Django Channels para que este modal se abra automáticamente (setIncomingOrder(data)) cuando el servidor envíe un evento new_order_notification.
+
+Time-to-Live (TTL): Implementar un temporizador (ej. 30 segundos) para aceptar antes de que la oferta expire.
+
+2. ✅ Modal de Confirmación Manual (DriverAcceptanceModal)
+
+Esta vista es gemela a la anterior pero se activa por una acción voluntaria del repartidor desde la lista.
+
+Contexto: Cuando el repartidor navega por la lista "Pedidos Disponibles" y decide tomar uno específico haciendo clic en "Aceptar Pedido".
+
+Diferencia: No es una notificación "push" sorpresiva, sino una confirmación de "pull" (tomar trabajo).
+
+Funcionalidad: Previene clics accidentales y permite revisar los detalles completos (especialmente la descripción y desglose de ganancias) antes de comprometerse.
+
+3. 👤 Perfil de Repartidor (DriverProfileView)
+
+Un dashboard completo que reemplaza la edición de perfil simple para los usuarios con rol de repartidor.
+
+🎨 Diseño
+
+Cabecera: Saludo personalizado "Hola, Repartidor" con el nombre real.
+
+Lista de Historial:
+
+Tarjetas estilo "Ticket" con borde izquierdo de color según el estado.
+
+Verde: Pedidos Entregado.
+
+Naranja: Pedidos Aceptado (En curso).
+
+Rojo: Pedidos Cancelado.
+
+Datos: Código de pedido, Descripción, Fecha y Valor ($).
+
+⚙️ Lógica Implementada
+
+Filtrado: Hace un fetch de todos los pedidos (/pedido/listar/) y filtra en el cliente: order.idRepartidor === currentUser.id.
+
+Ordenamiento: Muestra los más recientes primero (.reverse()).
+
+🔗 Pendiente de Backend
+
+Endpoint Dedicado: Crear /api/repartidor/historial/ para no descargar la base de datos de pedidos completa en el frontend, mejorando el rendimiento y la seguridad.
+
+Métricas: Agregar endpoints para "Ganancias de hoy", "Ganancias de la semana", etc.
+
+4. 🎛️ Menú "Mi Cuenta" (UserMenuDropdown)
+
+El menú desplegable ahora es inteligente y cambia según quién lo abre.
+
+🎨 Variantes
+
+Modo Estudiante:
+
+Opciones: Mi perfil (abre modal), Mi carrito (abre historial), Configuración, Cerrar Sesión.
+
+Modo Repartidor:
+
+Opciones: Mi perfil (abre Dashboard), Configuración.
+
+Toggle "Activar pedidos": Un interruptor visual (Rojo/Verde) para ponerse en línea.
+
+🔗 Pendiente de Backend
+
+Persistencia del Estado: Conectar el interruptor a un endpoint PATCH /usuario/estado/ para que el servidor sepa si debe enviarle notificaciones de nuevos pedidos a este repartidor.
+
+Resumen de Archivos Afectados
+
+frontend/script.html: Contiene toda la lógica de renderizado, estados locales (useState) y la estructura JSX de estos nuevos componentes.
