@@ -169,13 +169,36 @@
   const { useState, useRef, useEffect } = React;
 
     // --- AGREGA ESTO JUSTO DEBAJO ---
-    const uploadToCloudMock = async (fileOrBlob) => {
-        return new Promise((resolve) => { 
-            setTimeout(() => { resolve("https://via.placeholder.com/150"); }, 1500); 
-        });
+    const uploadToCloudinary = async (file, tipo) => {
+        const formData = new FormData();
+        formData.append('imagen', file);
+        formData.append('tipo', tipo); // 'perfil' o 'carnet'
+
+        const token = localStorage.getItem("accessToken");
+        try {
+            const response = await fetch(`${API_BASE_URL}/usuario/subir-imagen/`, {
+                method: 'POST',
+                headers: {
+                    // NO poner 'Content-Type': 'application/json' aquí, el navegador lo pone solo para FormData
+                    ...(token && { "Authorization": `Bearer ${token}` })
+                },
+                body: formData
+            });
+            
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || "Error subiendo imagen");
+            }
+            
+            const data = await response.json();
+            return data.url; // Retorna la URL real de Cloudinary
+        } catch (error) {
+            console.error("Upload error:", error);
+            throw error;
+        }
     };
     // --- CONFIGURACIÓN CENTRAL (NUEVA) ---
-    const API_BASE_URL = "https://taws-project.onrender.com/api";
+    const API_BASE_URL = "http://127.0.0.1:8000/api";
 
     // --- 1. FUNCIONES DE AYUDA Y MATEMÁTICAS ---
     
@@ -254,8 +277,11 @@
     const Check = ({ className }) => (<svg className={className} strokeWidth="3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"></polyline></svg>);
     const HelpCircle = () => (<svg {...IconProps} className="w-5 h-5 text-white"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>);
     const IdCard = ({ className }) => (<svg className={className} strokeWidth="1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"></rect><circle cx="8" cy="10" r="2"></circle><path d="M12 12c-2.5 0-5 1.5-5 3v2h10v-2c0-1.5-2.5-3-5-3z"></path><line x1="14" y1="8" x2="19" y2="8"></line><line x1="14" y1="11" x2="19" y2="11"></line></svg>);
-    
-    
+    const Settings = ({ className }) => (<svg className={className || "w-6 h-6 text-gray-700"} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>);
+    const Phone = ({ className }) => (<svg className={className || "w-6 h-6"} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>);
+    const WhatsApp = ({ className }) => (<svg className={className || "w-6 h-6"} viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>);
+    const PickupIcon = ({ className }) => (<svg className={className || "w-6 h-6"} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle><path d="M16 3l4 4-4 4"></path></svg>);
+    const DropoffIcon = ({ className }) => (<svg className={className || "w-6 h-6"} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path><circle cx="12" cy="10" r="3"></circle></svg>);
     // Icono específico para el repartidor en el historial
     const DeliveryIcon = ({ className }) => (
       <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -280,72 +306,303 @@
     
     // --- COMPONENTE: Modal de Confirmación ---
     function ConfirmacionModal({ onClose, servicio, desde, hasta, hora, onConfirmAction, costoBase }) {
-      const base = costoBase !== undefined ? parseFloat(costoBase) : 1.50;
-      const tarifaRepartidor = 2.25;
-      const totalPagar = base + tarifaRepartidor;
       const [loading, setLoading] = useState(false);
       
+      // --- LÓGICA CONECTADA AL BACKEND ---
+      // El 'costoBase' viene calculado desde el servidor (precios_dinamicos.py)
+      // En el backend definimos la Tarifa Base en $0.50, así que usamos eso para el desglose.
+      const tarifaArrancar = 0.50; 
+      const total = costoBase !== undefined ? parseFloat(costoBase) : 0;
+      
+      // Calculamos cuánto es de envío restando la base
+      const envioDistancia = Math.max(0, total - tarifaArrancar);
+
       const handleFinalConfirm = async () => {
         if (!onConfirmAction) return;
         setLoading(true);
         try {
-            await onConfirmAction(); 
-            onClose(); 
-        } catch (error) {
-            console.error(error);
-        } finally {
-            setLoading(false);
-        }
+            await onConfirmAction(); // Ejecuta la acción de crear pedido
+            onClose();
+        } catch (error) { console.error(error); } finally { setLoading(false); }
       };
       
       return (
-        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4 animate-in fade-in">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-auto relative p-6 sm:p-8 space-y-4 animate-in zoom-in-95">
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 animate-in fade-in backdrop-blur-sm">
+          <div className="bg-white rounded-[20px] shadow-2xl w-full max-w-sm mx-auto relative p-6 animate-in zoom-in-95 font-sans">
+            
             <button onClick={onClose} className="absolute top-4 right-4 p-2 hover:bg-gray-100 rounded-full transition-colors"><X /></button>
 
-            <h2 className="text-2xl sm:text-3xl font-bold text-gray-800">Confirmar tu Pedido</h2>
+            <h2 className="text-xl font-bold text-center text-black mb-6">Confirmar Pedido</h2>
             
-            <div className="text-sm text-gray-600 space-y-1 pt-2">
-              <p><strong className="text-gray-900">Servicio:</strong> {servicio || "No especificado"}</p>
-              <p><strong className="text-gray-900">Desde:</strong> {desde || "No especificado"}</p>
-              <p><strong className="text-gray-900">Hasta:</strong> {hasta || "No especificado"}</p>
-              <p><strong className="text-gray-900">Hora:</strong> {hora || "No especificado"}</p>
+            {/* SECCIÓN: TU REPARTIDOR (Diseño del Main) */}
+            <div className="mb-4">
+                <h3 className="text-sm font-bold text-black mb-2">Tu Repartidor</h3>
+                <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full border border-gray-300 flex items-center justify-center bg-gray-50">
+                        <User className="w-6 h-6 text-gray-400" />
+                    </div>
+                    <span className="text-gray-400 text-sm font-medium">Por asignar...</span>
+                </div>
+                <div className="h-px bg-gray-200 mt-4"></div>
             </div>
 
-            <div className="space-y-2 py-4 border-t">
-              <h3 className="text-lg font-semibold text-gray-800">Monto a Pagar</h3>
-              <div className="flex justify-between text-gray-700">
-                <p>TOTAL {servicio === "Comprar/Llevar" ? "(Productos)" : "(Servicio)"}</p>
-                <p>${base.toFixed(2)}</p>
-              </div>
-              <div className="flex justify-between text-gray-700">
-                <p>Tarifa del repartidor</p>
-                <p>${tarifaRepartidor.toFixed(2)}</p>
-              </div>
-              
-              <div className="border-t border-gray-200 pt-2 mt-2"></div>
-              <div className="flex justify-between text-xl font-bold text-black">
-                <p>Total a pagar</p>
-                <p>${totalPagar.toFixed(2)}</p>
-              </div>
+            {/* SECCIÓN: DETALLES */}
+            <div className="space-y-1 mb-4 text-sm">
+              <div className="flex"><span className="font-bold text-black w-24">Desde:</span> <span className="text-black truncate flex-1">{desde || "..."}</span></div>
+              <div className="flex"><span className="font-bold text-black w-24">Hasta:</span> <span className="text-black truncate flex-1">{hasta || "..."}</span></div>
+              <div className="flex"><span className="font-bold text-black w-24">Hora:</span> <span className="text-black truncate flex-1">{hora || "--:--"}</span></div>
+              <div className="flex"><span className="font-bold text-black w-24">Servicio:</span> <span className="text-black truncate flex-1">{servicio}</span></div>
             </div>
 
-            <div className="space-y-3 pb-4">
-              <h3 className="text-lg font-semibold text-gray-800">Métodos de Pagos</h3>
-              <div className="bg-gray-100 border border-gray-200 rounded-lg p-3 flex items-center space-x-3">
-                <span className="text-2xl">💵</span>
-                <span className="font-medium text-gray-800">Efectivo</span>
-              </div>
-              <p className="text-xs text-gray-500">Pagar al repartidor al recibir el pedido</p>
+            {/* SECCIÓN: CÓDIGO ÚNICO (Placeholder Visual) */}
+            <div className="mb-4">
+                <p className="text-sm font-bold text-black mb-1">Código único:</p>
+                <div className="bg-gray-50 px-3 py-2 rounded border border-gray-200 text-xs text-gray-400 font-mono">
+                    PENDIENTE DE ASIGNACIÓN
+                </div>
             </div>
 
-            <button onClick={handleFinalConfirm} disabled={loading} className="w-full bg-black text-white py-3 rounded-lg font-medium hover:bg-gray-800 transition-colors flex justify-center">
-              {loading ? "Procesando..." : "Confirmar y Publicar Pedido"}
+            {/* --- AQUÍ ESTÁ LA FACTURA GRIS (Diseño Original del Main) --- */}
+            <div className="bg-[#D9D9D9] rounded-xl p-5 mb-6 space-y-2">
+                <div className="flex justify-between items-center text-sm font-medium text-black">
+                    <span>Costo del producto:</span>
+                    <span>-</span> {/* En envíos normales no hay producto */}
+                </div>
+                <div className="flex justify-between items-center text-sm font-medium text-black">
+                    <span>Tarifa por arrancar:</span>
+                    <span>${tarifaArrancar.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between items-center text-sm font-medium text-black">
+                    <span>Envió por distancia:</span>
+                    <span>${envioDistancia.toFixed(2)}</span>
+                </div>
+                <div className="w-full h-px bg-gray-400 my-2"></div>
+                <div className="flex justify-between items-center font-bold text-lg text-black">
+                    <span>Total:</span>
+                    <span>${total.toFixed(2)}</span>
+                </div>
+            </div>
+            {/* ----------------------------------------------------------- */}
+
+            <div className="flex justify-center">
+                <button 
+                    onClick={handleFinalConfirm} 
+                    disabled={loading} 
+                    className="bg-[#2D2D2D] text-white px-12 py-3 rounded-lg font-medium text-sm hover:bg-black transition-colors shadow-lg disabled:opacity-70"
+                >
+                    {loading ? "Procesando..." : "Confirmar"}
+                </button>
+            </div>
+
+          </div>
+        </div>
+      );
+    }
+
+        // Modal de Notificación Push para Repartidor
+    function IncomingOrderModal({ order, onAccept, onReject }) {
+      if (!order) return null;
+      const tarifaArrancar = 0.50;
+      const total = parseFloat(order.costoEnvio) || 0;
+      const envioDistancia = Math.max(0, total - tarifaArrancar); 
+      const recogidaTexto = order.punto_origen || "Origen no especificado";
+      const entregaTexto = order.punto_destino || "Destino no especificado";
+
+      return (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[70] p-4 animate-in fade-in backdrop-blur-sm">
+            <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-xs mx-auto relative overflow-hidden animate-in zoom-in-95 border border-gray-200">
+                <div className="p-6 relative z-10">
+                    <h2 className="text-2xl font-black text-center text-black mb-6">Nuevo Pedido.</h2>
+                    <div className="bg-[#D9D9D9] rounded-xl p-4 mb-6 relative">
+                        <div className="space-y-2 text-sm font-medium text-black">
+                            <div className="flex justify-between"><span>Tarifa por arrancar:</span><span>${tarifaArrancar.toFixed(2)}</span></div>
+                            <div className="flex justify-between"><span>Envío por distancia:</span><span>${envioDistancia.toFixed(2)}</span></div>
+                        </div>
+                        <div className="mt-3 pt-2 border-t border-gray-400/50 flex justify-between items-end"><span className="font-bold text-lg text-black">Total:</span><span className="font-black text-2xl text-black">${total.toFixed(2)}</span></div>
+                    </div>
+                    <div className="space-y-4 mb-8 px-1">
+                        <div className="flex items-center gap-3"><div className="p-1 bg-gray-100 rounded-full border border-gray-300"><PickupIcon className="w-5 h-5 text-gray-700" /></div><div><p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Recogida:</p><p className="text-sm font-bold text-gray-900 leading-tight">{recogidaTexto}</p></div></div>
+                        <div className="flex items-center gap-3"><div className="p-1 bg-gray-100 rounded-full border border-gray-300"><DropoffIcon className="w-5 h-5 text-gray-700" /></div><div><p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Entrega:</p><p className="text-sm font-bold text-gray-900 leading-tight">{entregaTexto}</p></div></div>
+                        <div className="mt-2 p-2 bg-gray-50 rounded text-xs text-gray-600 italic border border-gray-100">"{order.descripcion}"</div>
+                    </div>
+                    <div className="space-y-3">
+                        <button onClick={() => onAccept(order.codigoPedido)} className="w-full bg-[#2c2c2c] text-white py-3 rounded-lg font-bold text-sm hover:bg-black transition-colors shadow-lg">Confirmar</button>
+                        <button onClick={onReject} className="w-full bg-[#2c2c2c] text-white py-3 rounded-lg font-bold text-sm hover:bg-black transition-colors shadow-lg">Cancelar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+      );
+    }
+
+
+    // Modal de Confirmación Manual cuando el repartidor selecciona de la lista
+    function DriverAcceptanceModal({ order, onConfirm, onCancel }) {
+      if (!order) return null;
+      const tarifaArrancar = 0.50;
+      const total = parseFloat(order.costoEnvio) || 0;
+      const envioDistancia = Math.max(0, total - tarifaArrancar); 
+      const recogidaTexto = order.punto_origen || "Origen no especificado";
+      const entregaTexto = order.punto_destino || "Destino no especificado";
+
+      return (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[70] p-4 animate-in fade-in backdrop-blur-sm">
+            <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-xs mx-auto relative overflow-hidden animate-in zoom-in-95 border border-gray-200">
+                <div className="p-6 relative z-10">
+                    <h2 className="text-2xl font-black text-center text-black mb-6">Confirmar Pedido</h2>
+                    <div className="bg-[#D9D9D9] rounded-xl p-4 mb-6 relative">
+                        <div className="space-y-2 text-sm font-medium text-black">
+                            <div className="flex justify-between"><span>Tarifa por arrancar:</span><span>${tarifaArrancar.toFixed(2)}</span></div>
+                            <div className="flex justify-between"><span>Envío por distancia:</span><span>${envioDistancia.toFixed(2)}</span></div>
+                        </div>
+                        <div className="mt-3 pt-2 border-t border-gray-400/50 flex justify-between items-end"><span className="font-bold text-lg text-black">Total:</span><span className="font-black text-2xl text-black">${total.toFixed(2)}</span></div>
+                    </div>
+                    <div className="space-y-4 mb-8 px-1">
+                        <div className="flex items-center gap-3"><div className="p-1 bg-gray-100 rounded-full border border-gray-300"><PickupIcon className="w-5 h-5 text-gray-700" /></div><div><p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Recogida:</p><p className="text-sm font-bold text-gray-900 leading-tight">{recogidaTexto}</p></div></div>
+                        <div className="flex items-center gap-3"><div className="p-1 bg-gray-100 rounded-full border border-gray-300"><DropoffIcon className="w-5 h-5 text-gray-700" /></div><div><p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Entrega:</p><p className="text-sm font-bold text-gray-900 leading-tight">{entregaTexto}</p></div></div>
+                        <div className="mt-2 p-2 bg-gray-50 rounded text-xs text-gray-600 italic border border-gray-100">"{order.descripcion}"</div>
+                    </div>
+                    <div className="space-y-3">
+                        <button onClick={() => onConfirm(order.codigoPedido)} className="w-full bg-[#2c2c2c] text-white py-3 rounded-lg font-bold text-sm hover:bg-black transition-colors shadow-lg">Confirmar</button>
+                        <button onClick={onCancel} className="w-full bg-[#2c2c2c] text-white py-3 rounded-lg font-bold text-sm hover:bg-black transition-colors shadow-lg">Cancelar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+      );
+    }
+
+    // Modal de Edición de Perfil para Estudiantes
+    function ProfileEditModal({ user, onClose, onUpdateUser }) {
+      const [formData, setFormData] = useState({ 
+        nombre: user?.nombre || "", 
+        apellido: user?.apellido || "", 
+        telefono: user?.telefono || "", 
+        whatsapp: user?.telefono || "" 
+      });
+      const [loading, setLoading] = useState(false);
+      
+      const handleChange = (e) => { 
+        setFormData({ ...formData, [e.target.name]: e.target.value }); 
+      };
+      
+      const handleSubmit = async () => { 
+        setLoading(true); 
+        try { 
+          await apiCall(`/usuario/actualizar/${user.id}/`, 'PATCH', { 
+            nombre: formData.nombre, 
+            apellido: formData.apellido, 
+            telefono: formData.telefono 
+          }); 
+          alert("✅ Perfil actualizado correctamente"); 
+          onUpdateUser(); 
+          onClose(); 
+        } catch (error) { 
+          console.error(error); 
+          alert("Error al actualizar: " + error.message); 
+        } finally { 
+          setLoading(false); 
+        } 
+      };
+      
+      return (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[60] p-4 animate-in fade-in backdrop-blur-sm">
+          <div className="bg-white rounded-[30px] shadow-2xl w-full max-w-sm mx-auto relative p-8 animate-in zoom-in-95">
+            <button onClick={onClose} className="absolute top-6 right-6 p-2 hover:bg-gray-100 rounded-full transition-colors">
+              <X className="w-6 h-6 text-black" />
+            </button>
+            <div className="flex flex-col items-center mb-8">
+              <div className="w-24 h-24 rounded-full bg-[#EFE6FD] flex items-center justify-center text-[#5B21B6] overflow-hidden border-4 border-white shadow-md mb-4">
+                {user?.foto_perfil ? (
+                  <img src={user.foto_perfil} className="w-full h-full object-cover" alt="Perfil" />
+                ) : (
+                  <User className="w-12 h-12" />
+                )}
+              </div>
+              <h2 className="text-3xl font-bold text-black">Perfil</h2>
+            </div>
+            <div className="space-y-4 mb-8">
+              <div className="bg-[#D9D9D9] rounded-lg flex items-center px-4 py-3">
+                <User className="w-6 h-6 text-black mr-3" />
+                <input type="text" name="nombre" value={formData.nombre} onChange={handleChange} placeholder="Nombre" className="bg-transparent border-none outline-none text-black w-full placeholder-gray-600"/>
+              </div>
+              <div className="bg-[#D9D9D9] rounded-lg flex items-center px-4 py-3">
+                <User className="w-6 h-6 text-black mr-3 opacity-0" />
+                <input type="text" name="apellido" value={formData.apellido} onChange={handleChange} placeholder="Apellido" className="bg-transparent border-none outline-none text-black w-full placeholder-gray-600"/>
+              </div>
+              <div className="bg-[#D9D9D9] rounded-lg flex items-center px-4 py-3">
+                <Phone className="w-6 h-6 text-black mr-3" />
+                <input type="tel" name="telefono" value={formData.telefono} onChange={handleChange} placeholder="Numero de teléfono" className="bg-transparent border-none outline-none text-black w-full placeholder-gray-600"/>
+              </div>
+              <div className="bg-[#D9D9D9] rounded-lg flex items-center px-4 py-3">
+                <WhatsApp className="w-6 h-6 text-black mr-3" />
+                <input type="tel" name="whatsapp" value={formData.whatsapp} onChange={handleChange} placeholder="Numero de whatsapp" className="bg-transparent border-none outline-none text-black w-full placeholder-gray-600"/>
+              </div>
+            </div>
+            <button onClick={handleSubmit} disabled={loading} className="w-full bg-[#E31C1C] text-white py-3 rounded-xl font-medium text-lg hover:bg-red-700 transition-colors shadow-md disabled:opacity-50">
+              {loading ? "Guardando..." : "Guardar cambios"}
             </button>
           </div>
         </div>
       );
     }
+
+    // Menú Dropdown adaptativo por rol
+    function UserMenuDropdown({ user, onClose, onLogout, onOpenProfile }) { 
+      const isDriver = user?.rol === 'repartidor';
+      const [isAvailable, setIsAvailable] = useState(false);
+      const toggleAvailability = () => { setIsAvailable(!isAvailable); };
+      
+      return (
+        <div className="absolute right-0 top-full mt-4 w-80 bg-white rounded-[2rem] shadow-2xl border border-gray-100 z-50 animate-in fade-in zoom-in-95 overflow-hidden ring-1 ring-black/5">
+          <div className="p-6 relative">
+            <button onClick={onClose} className="absolute top-5 right-5 text-black hover:text-gray-600 transition-colors">
+              <X className="w-6 h-6" />
+            </button>
+            <div className="flex items-center gap-4 mb-8 pr-8">
+              <div className="flex-shrink-0 w-16 h-16 rounded-full bg-[#EFE6FD] flex items-center justify-center text-[#5B21B6] overflow-hidden border-2 border-white shadow-sm">
+                {user?.foto_perfil ? (
+                  <img src={user.foto_perfil} className="w-full h-full object-cover" alt="Perfil" />
+                ) : (
+                  <User className="w-8 h-8" />
+                )}
+              </div>
+              <div className="flex flex-col">
+                <h3 className="text-2xl font-bold text-black leading-none mb-1">Mi cuenta.</h3>
+                <p className="text-sm text-gray-600 font-medium">Hola, {isDriver ? "Repartidor" : (user?.nombre || "Estudiante")}.</p>
+              </div>
+            </div>
+            <div className="space-y-5 mb-8">
+              <button onClick={() => { onClose(); onOpenProfile(); }} className="flex items-center gap-4 w-full text-left group hover:bg-gray-50 rounded-lg -mx-2 px-2 py-1 transition-colors">
+                <User className="w-7 h-7 text-black group-hover:text-gray-700" />
+                <span className="text-lg text-black font-medium group-hover:text-gray-700">Mi perfil</span>
+              </button>
+              {!isDriver && (
+                <button className="flex items-center gap-4 w-full text-left group hover:bg-gray-50 rounded-lg -mx-2 px-2 py-1 transition-colors">
+                  <ShoppingCart className="w-7 h-7 text-black group-hover:text-gray-700" />
+                  <span className="text-lg text-black font-medium group-hover:text-gray-700">Mi carrito</span>
+                </button>
+              )}
+              <button className="flex items-center gap-4 w-full text-left group hover:bg-gray-50 rounded-lg -mx-2 px-2 py-1 transition-colors">
+                <Settings className="w-7 h-7 text-black group-hover:text-gray-700" />
+                <span className="text-lg text-black font-medium group-hover:text-gray-700">Configuración</span>
+              </button>
+            </div>
+            {isDriver && (
+              <div className="mb-8 flex items-center justify-between pl-1">
+                <div onClick={toggleAvailability} className={`w-14 h-8 rounded-full p-1 cursor-pointer transition-colors duration-300 ${isAvailable ? 'bg-green-600' : 'bg-red-600'}`}>
+                  <div className={`bg-white w-6 h-6 rounded-full shadow-md transform transition-transform duration-300 ${isAvailable ? 'translate-x-6' : 'translate-x-0'}`}></div>
+                </div>
+                <span className="text-lg text-black font-medium mr-4">Activar pedidos</span>
+              </div>
+            )}
+            <button onClick={onLogout} className="w-full bg-[#E31C1C] text-white py-3.5 rounded-xl font-bold text-lg hover:bg-red-700 transition-colors shadow-md">
+              Cerrar Sesión
+            </button>
+          </div>
+        </div>
+      );
+    }    
 
     // --- NUEVO COMPONENTE: Popover de Historial de Pedidos ---
     function OrderHistoryPopup({ isOpen, onClose, onNavigateToFullHistory, currentUserId }) {
@@ -556,60 +813,50 @@
       const [precioEstimado, setPrecioEstimado] = useState(0);
       const [distanciaKm, setDistanciaKm] = useState(0);
 
-      // CÁLCULO AUTOMÁTICO
+// A. NUEVO CÁLCULO DE PRECIO (Conecta con Backend)
       useEffect(() => {
-          const calcular = () => {
+          const calcular = async () => {
               const coord1 = parseCoordinates(recogida);
               const coord2 = parseCoordinates(entrega);
               
-              let dist = 0;
+              let dist = 1.0; 
               if (coord1 && coord2) {
-                  // Si ambos son puntos del mapa, calculamos distancia real
                   dist = getDistanceFromLatLonInKm(coord1.lat, coord1.lng, coord2.lat, coord2.lng);
-              } else if (recogida && entrega) {
-                   dist = 1.0; // Tarifa mínima si es texto manual
               }
               setDistanciaKm(dist);
 
-              // FÓRMULA DE PRECIO: Base ($0.50) + Arranque ($0.25) + ($0.25 x KM)
-              const total = 0.50 + 0.25 + (dist * 0.25);
-              setPrecioEstimado(total);
+              // Llamada a tu API nueva
+              try {
+                  const data = await apiCall(`/pedido/precio_dinamico/?distancia=${dist}&tipo=normal`);
+                  setPrecioEstimado(data.precio);
+              } catch (e) {
+                  console.error("Error calculando precio:", e);
+              }
           };
-          calcular();
-      }, [recogida, entrega]); // Se ejecuta cuando cambian las direcciones
+          
+          // Espera 500ms a que termines de escribir/seleccionar para no saturar
+          const timer = setTimeout(calcular, 500);
+          return () => clearTimeout(timer);
 
-      const isFormValid = fecha.trim() !== "" && recogida.trim() !== "" && entrega.trim() !== "" && hora.trim() !== "" && descripcion.trim() !== "" && whatsapp.trim() !== "";
-      
-      const handleMapSelection = (coordTexto) => { 
-        if (activeField === "recogida") setRecogida(coordTexto); 
-        else setEntrega(coordTexto); 
-      };
-      
+      }, [recogida, entrega]);
+
+      // B. NUEVO ENVÍO DE PEDIDO (Sin simulaciones falsas)
       const handleSubmit = async () => {
            try {
               if (!localStorage.getItem("accessToken")) { alert("Debes iniciar sesión."); return; }
-              const nuevoPedido = await apiCall("/pedido/crear/", "POST", { 
+              
+              await apiCall("/pedido/crear/", "POST", { 
                   num_whats: whatsapp, 
                   descripcion: `${descripcion} (De: ${recogida} -> A: ${entrega})`, 
-                  punto_origen_id: 1, 
-                  punto_desitno_id: 1, 
-                  horaDeseada: new Date().toISOString(), 
-                  fechaInicial: new Date().toISOString(), 
-                  costoEnvio: precioEstimado, // Usamos el precio calculado
+                  punto_origen: recogida,  // OJO: Usamos los campos de texto nuevos
+                  punto_destino: entrega, 
+                  horaDeseada: new Date().toISOString(), // O la hora real del input
+                  costoEnvio: precioEstimado,
                   estado: "Publicado" 
               });
-              alert("✅ Pedido creado. Buscando repartidor..."); onGoBack();
               
-              // Simulación de flujo
-              setTimeout(async () => { 
-                  try { 
-                      await apiCall(`/pedido/simular-aceptacion/${nuevoPedido.codigoPedido}/`, "POST"); 
-                      setTimeout(async () => { 
-                          await apiCall(`/pedido/simular-entrega/${nuevoPedido.codigoPedido}/`, "POST"); 
-                          alert("🏁 Tu pedido ha sido ENTREGADO."); 
-                      }, 15000); 
-                  } catch (e) { console.error(e); } 
-              }, 5000);
+              alert("✅ Pedido publicado. Esperando repartidor..."); 
+              onGoBack(); // Volver al inicio real
 
           } catch (error) { alert("Error: " + error.message); }
       };
@@ -1149,8 +1396,12 @@ function FastPrintsView({ onGoBack, onNavigateToSendReceive, onNavigateToBuyTake
             </div>
           </header>
           <main className="max-w-4xl mx-auto">
-            <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-4">Completa tu perfil.</h1>
-            <p className="text-gray-500 mb-12">Necesitamos estos datos para validarte como repartidor seguro.</p>
+            <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-4">
+                Te damos la bienvenida{regData.nombre ? `, ${regData.nombre}` : ""}.
+            </h1>
+            <p className="text-gray-500 mb-12">
+                Completa estos pasos para activar tu cuenta de repartidor.
+            </p>
             
             <div className="space-y-4">
               {/* PASO 1: DATOS BÁSICOS */}
@@ -1226,7 +1477,13 @@ function FastPrintsView({ onGoBack, onNavigateToSendReceive, onNavigateToBuyTake
       
       return (
         <div className="min-h-screen bg-pink-50 p-4 sm:p-8 animate-in fade-in duration-300">
-          <header className="max-w-xl mx-auto mb-8 flex justify-between items-center"><button onClick={onGoBack} className="p-2 hover:bg-gray-100 rounded-full transition-colors"><ArrowLeft /></button></header>
+          <header className="max-w-xl mx-auto mb-8 flex justify-between items-center">
+    <button onClick={onGoBack} className="p-2 hover:bg-gray-100 rounded-full transition-colors"><ArrowLeft /></button>
+    {/* Agregado del Main: */}
+    <button className="flex items-center gap-2 px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-black transition-colors">
+        <HelpCircle /><span className="text-sm font-medium">Ayuda</span>
+    </button>
+</header>
           <main className="max-w-xl mx-auto">
             <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-6">Sube foto de credencial.</h1>
             <div className="w-full flex justify-center mb-8"><div className="w-full max-w-sm h-48 bg-gray-300 rounded-xl flex items-center justify-center border-4 border-dashed border-gray-400"><IdCard className="w-40 h-40 text-gray-500" /></div></div>
@@ -1268,7 +1525,13 @@ function FastPrintsView({ onGoBack, onNavigateToSendReceive, onNavigateToBuyTake
 
       return (
         <div className="min-h-screen bg-pink-50 p-4 sm:p-8 animate-in fade-in duration-300">
-          <header className="max-w-xl mx-auto mb-8 flex justify-between items-center"><button onClick={onGoBack} className="p-2 hover:bg-gray-100 rounded-full transition-colors"><ArrowLeft /></button></header>
+          <header className="max-w-xl mx-auto mb-8 flex justify-between items-center">
+              <button onClick={onGoBack} className="p-2 hover:bg-gray-100 rounded-full transition-colors"><ArrowLeft /></button>
+              {/* Agregado del Main: */}
+              <button className="flex items-center gap-2 px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-black transition-colors">
+                  <HelpCircle /><span className="text-sm font-medium">Ayuda</span>
+              </button>
+          </header>
           <main className="max-w-xl mx-auto">
             <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-6">Foto de perfil.</h1>
             <div className="w-full flex justify-center mb-8"><div className="w-56 h-56 bg-gray-300 rounded-full flex items-center justify-center overflow-hidden border-4 border-white shadow-lg">{stream ? (<video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover transform -scale-x-100" />) : (<User className="w-32 h-32 text-gray-500" />)}</div></div>
@@ -1289,39 +1552,195 @@ function FastPrintsView({ onGoBack, onNavigateToSendReceive, onNavigateToBuyTake
 
     function ActiveOrderView({ orderId, userRole, onGoBack }) {
         const [order, setOrder] = useState(null);
+        const [otpInput, setOtpInput] = useState("");
+
+        // 1. LÓGICA DE DATOS (Backend Real)
         useEffect(() => {
-            const fetchDetail = async () => { try { const data = await apiCall(`/pedido/detalle/${orderId}/`); setOrder(data); } catch (e) { console.error(e); } };
+            const fetchDetail = async () => { 
+                try { 
+                    const data = await apiCall(`/pedido/detalle/${orderId}/`); 
+                    setOrder(data); 
+                } catch (e) { console.error(e); } 
+            };
             fetchDetail();
             const interval = setInterval(fetchDetail, 5000); 
             return () => clearInterval(interval);
         }, [orderId]);
-        const handleComplete = async () => { if (!confirm("¿Confirmas la entrega?")) return; try { await apiCall(`/pedido/actualizar/${orderId}/`, "PATCH", { estado: "Entregado" }); alert("¡Pedido entregado!"); onGoBack(); } catch (e) { alert(e.message); } };
-        if (!order) return <div className="p-10 text-center">Cargando información del pedido...</div>;
+
+        // 2. LÓGICA DE FINALIZAR (Solo Repartidor)
+        const handleComplete = async () => {
+            if (!otpInput) return alert("⚠️ Debes ingresar el código de 4 dígitos.");
+            try {
+                await apiCall(`/pedido/finalizar/${orderId}/`, "POST", { otp: otpInput });
+                alert("✅ Entrega validada con éxito.");
+                onGoBack(); 
+            } catch (e) { alert("❌ " + e.message); }
+        };
+
+        if (!order) return <div className="min-h-screen flex items-center justify-center font-bold text-xl">Cargando tu pedido...</div>;
+        
         const isDriver = userRole === "repartidor";
+        const isFinished = order.estado === 'Entregado';
+
+        // 3. DISEÑO "SPLIT VIEW" (Replicado de tu imagen image_9b70bf.png)
         return (
-            <div className="recorrido-view relative">
-                <div className="btn-back-float" onClick={onGoBack}><ArrowLeft /></div>
-                <div className="tracking-container">
-                    <h1>Recorrido del pedido: #{order.codigoPedido}</h1>
-                    <div className="map-container"><MapComponent mapId="active-map" /></div>
-                    <div className="info-section">
-                        <div className="card-custom"><h2>Recogida</h2><p>Estado: <span className="text-blue-600">{order.estado}</span></p><br /> <p>Desde: {order.punto_origen_id} (FCI)</p> <p>Cliente: {order.cliente_nombre}</p></div>
-                        <div className="card-custom"><h2>Entrega</h2><p>Hora deseada: {order.horaDeseada ? order.horaDeseada.split("T")[1]?.slice(0,5) : "--:--"}</p><br /> <p>Hasta: {order.punto_destino_id} (Rectorado)</p><p>Costo: ${order.costoEnvio}</p></div>
+            <div className="min-h-screen bg-white flex flex-col lg:flex-row font-sans">
+                
+                {/* --- COLUMNA IZQUIERDA: INFORMACIÓN Y ESTADOS (35% ancho) --- */}
+                <div className="w-full lg:w-[450px] bg-white flex flex-col h-auto lg:h-screen shadow-2xl z-20 relative border-r border-gray-100">
+                    
+                    {/* Header con Botón Atrás */}
+                    <div className="p-6 pb-2 bg-white sticky top-0 z-10">
+                        <button onClick={onGoBack} className="flex items-center gap-2 text-gray-500 hover:text-black transition-colors mb-4">
+                            <ArrowLeft className="w-5 h-5" /> <span className="font-medium">Volver</span>
+                        </button>
+                        
+                        <h1 className="text-3xl font-black text-gray-900 tracking-tight leading-none mb-2">Seguimiento de pedido</h1>
+                        
+                        <div className="flex flex-col">
+                            <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Logística y Estado</span>
+                            <div className="flex items-center gap-2 mt-1">
+                                <span className="text-gray-400 font-mono text-sm">#{order.codigoPedido}</span>
+                                {/* Badge de Estado */}
+                                <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wide border ${isFinished ? 'bg-green-50 text-green-700 border-green-200' : 'bg-black text-white border-black'}`}>
+                                    {order.estado}
+                                </span>
+                            </div>
+                        </div>
                     </div>
-                    <div className="btn-container">{isDriver && order.estado !== "Entregado" ? (<button className="btn-delivered" onClick={handleComplete}>Confirmar Pedido Entregado</button>) : (<div className="text-center font-bold text-gray-500">{order.estado === "Entregado" ? "✅ Pedido Finalizado" : "🚗 Pedido en curso..."}</div>)}</div>
+
+                    {/* Contenido Principal */}
+                    <div className="flex-1 overflow-y-auto p-6 pt-2 space-y-8">
+                        
+                        {/* Nombre del Pedido */}
+                        <div>
+                            <h2 className="text-2xl font-bold text-gray-900">{order.descripcion.split('(')[0] || "Encargo General"}</h2>
+                            <p className="text-sm text-gray-400 mt-1">
+                                {order.estado === 'Publicado' ? "Esperando asignación..." : `Gestionado por: ${isDriver ? order.cliente_nombre : (order.repartidor_nombre || "...")}`}
+                            </p>
+                        </div>
+
+                        {/* --- TIMELINE VISUAL (Idéntico a la imagen) --- */}
+                        <div className="relative pl-4 border-l-2 border-gray-100 ml-2 space-y-10 py-2">
+                            {/* Punto A: Recogida (Círculo Gris) */}
+                            <div className="relative">
+                                <div className="absolute -left-[21px] top-1 w-4 h-4 bg-gray-200 rounded-full border-4 border-white ring-1 ring-gray-100"></div>
+                                <div>
+                                    <p className="text-xs font-bold text-gray-900 uppercase mb-0.5">Punto de Recogida</p>
+                                    <p className="text-xs text-gray-500">{new Date(order.fechaInicial).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
+                                    <p className="font-medium text-gray-700 mt-1 text-sm bg-gray-50 p-2 rounded-lg inline-block">
+                                        📍 {order.punto_origen}
+                                    </p>
+                                </div>
+                            </div>
+
+                            {/* Punto B: Entrega (Círculo Negro) */}
+                            <div className="relative">
+                                <div className={`absolute -left-[21px] top-1 w-4 h-4 rounded-full border-4 border-white ring-1 ring-gray-100 ${isFinished ? 'bg-green-500' : 'bg-black'}`}></div>
+                                <div>
+                                    <p className={`text-xs font-bold uppercase mb-0.5 ${isFinished ? 'text-green-600' : 'text-black'}`}>
+                                        {isFinished ? "Entregado" : "Entrega Final"}
+                                    </p>
+                                    <p className="text-xs text-gray-500">
+                                        {order.horaDeseada ? "Estimado: " + new Date(order.horaDeseada).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : "Pendiente"}
+                                    </p>
+                                    <p className="font-medium text-gray-700 mt-1 text-sm bg-gray-50 p-2 rounded-lg inline-block">
+                                        🏁 {order.punto_destino}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Tarjeta de Contacto (Repartidor/Cliente) */}
+                        <div className="bg-gray-50 p-4 rounded-2xl flex items-center gap-4 border border-gray-100 shadow-sm">
+                            <div className="w-10 h-10 bg-white border border-gray-200 rounded-full flex items-center justify-center text-lg shadow-sm">
+                                👤
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{isDriver ? "Cliente" : "Repartidor"}</p>
+                                <p className="font-bold text-gray-900 truncate">
+                                    {isDriver ? order.cliente_nombre : (order.repartidor_nombre || "Buscando...")}
+                                </p>
+                            </div>
+                            {/* Botón WhatsApp */}
+                            {order.num_whats && (
+                                <a href={`https://wa.me/${order.num_whats}`} target="_blank" className="bg-green-500 text-white p-2 rounded-full hover:bg-green-600 transition-colors shadow-md flex items-center justify-center">
+                                    <WhatsApp className="w-5 h-5" />
+                                </a>
+                            )}
+                        </div>
+
+                    </div>
+
+                    {/* --- FOOTER: ACCIONES Y PIN (Sticky Bottom) --- */}
+                    <div className="p-6 border-t border-gray-100 bg-white">
+                        
+                        {/* CASO: Mostrar PIN al Cliente */}
+                        {order.estado === 'Aceptado' && !isDriver && (
+                            <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 text-center shadow-inner">
+                                <p className="text-[10px] font-bold text-yellow-800 uppercase mb-1 tracking-widest">Código de Seguridad</p>
+                                <p className="text-4xl font-mono font-black text-gray-900 tracking-[0.3em]">{order.codigo_entrega}</p>
+                                <p className="text-[10px] text-gray-500 mt-1">Dicta este código al repartidor para confirmar.</p>
+                            </div>
+                        )}
+
+                        {/* CASO: Ingresar PIN el Repartidor */}
+                        {order.estado === 'Aceptado' && isDriver && (
+                            <div className="flex gap-2">
+                                <input 
+                                    type="tel" maxLength="4" placeholder="PIN" 
+                                    className="w-24 text-center text-xl font-mono font-bold p-3 border-2 border-gray-200 rounded-xl focus:border-black outline-none transition-colors bg-gray-50"
+                                    value={otpInput} onChange={(e) => setOtpInput(e.target.value)} 
+                                />
+                                <button 
+                                    onClick={handleComplete}
+                                    className="flex-1 bg-black text-white font-bold rounded-xl hover:bg-gray-800 transition-transform active:scale-95 shadow-lg"
+                                >
+                                    Marcar como Entregado
+                                </button>
+                            </div>
+                        )}
+
+                        {/* CASO: Esperando */}
+                        {order.estado === 'Publicado' && (
+                            <div className="text-center py-3 bg-gray-50 rounded-xl border border-gray-100 text-gray-400 text-sm animate-pulse">
+                                📡 Buscando repartidor cercano...
+                            </div>
+                        )}
+                        
+                        {/* CASO: Finalizado */}
+                        {isFinished && (
+                            <div className="bg-black text-white py-4 rounded-xl text-center font-bold shadow-lg">
+                                ✅ Orden Completada
+                            </div>
+                        )}
+                    </div>
                 </div>
+
+                {/* --- COLUMNA DERECHA: MAPA (65% ancho) --- */}
+                <div className="flex-1 bg-gray-100 relative min-h-[400px] lg:min-h-screen">
+                    <MapComponent mapId="active-map" />
+                    
+                    {/* Tarjeta Flotante de Precio (Estilo Main) */}
+                    <div className="hidden lg:block absolute bottom-8 right-8 bg-white px-6 py-4 rounded-2xl shadow-2xl z-[400] border border-gray-100 transform hover:scale-105 transition-transform">
+                        <p className="text-xs text-gray-400 font-bold uppercase mb-1 tracking-wider">Costo Total</p>
+                        <p className="text-3xl font-black text-gray-900">${order.costoEnvio}</p>
+                    </div>
+                </div>
+
             </div>
         );
     }
 
- // --- NUEVO DASHBOARD DE REPARTIDOR ---
-    function DriverDashboardView({ onGoBack, onNavigateToActiveOrder, currentUser }) {
-      const [isOnline, setIsOnline] = useState(false); // Estado: ¿Está conectado?
+    // --- NUEVO DASHBOARD DE REPARTIDOR ---
+    // Dashboard de Repartidor con Modal de Confirmación y Simulación Push
+    function DriverDashboardView({ onGoBack, onNavigateToActiveOrder, currentUser, setIncomingOrder }) {
+      const [isOnline, setIsOnline] = useState(false);
       const [orders, setOrders] = useState([]);
       const [myStats, setMyStats] = useState({ ganancia: 0, completados: 0 });
       const [loading, setLoading] = useState(false);
+      const [selectedOrder, setSelectedOrder] = useState(null);
 
-      // Cargar datos al iniciar
       useEffect(() => {
           fetchData();
       }, [currentUser]);
@@ -1329,24 +1748,19 @@ function FastPrintsView({ onGoBack, onNavigateToSendReceive, onNavigateToBuyTake
       const fetchData = async () => {
           setLoading(true);
           try {
-              const allOrders = await apiCall("/pedido/listar/");
-              
-              // 1. Filtrar pedidos disponibles (Solo los "Publicado")
-              const disponibles = allOrders.filter(o => o.estado === "Publicado");
+              const disponibles = await apiCall("/pedido/publicados/");
               setOrders(disponibles);
 
-              // 2. Calcular ganancias (Sumar pedidos "Entregados" por este usuario)
               if (currentUser) {
-                  const misEntregas = allOrders.filter(o => 
-                      o.estado === "Entregado" && o.idCliente === currentUser.id // NOTA: Aquí idealmente sería idRepartidor
-                  );
-                  
-                  const totalDinero = misEntregas.reduce((sum, order) => sum + parseFloat(order.costoEnvio || 0), 0);
-                  
-                  setMyStats({
-                      ganancia: totalDinero.toFixed(2),
-                      completados: misEntregas.length
-                  });
+                  try {
+                      const stats = await apiCall("/pedido/ganancias/");
+                      setMyStats({
+                          ganancia: stats.ganancias_acumuladas.toFixed(2),
+                          completados: "N/A"
+                      });
+                  } catch(e) {
+                      console.warn("No se pudieron cargar ganancias:", e);
+                  }
               }
           } catch (error) { console.error(error); } finally { setLoading(false); }
       };
@@ -1354,15 +1768,20 @@ function FastPrintsView({ onGoBack, onNavigateToSendReceive, onNavigateToBuyTake
       const handleToggleOnline = () => {
           const newState = !isOnline;
           setIsOnline(newState);
-          if (newState) fetchData(); // Recargar pedidos al conectarse
+          if (newState) fetchData();
       };
 
-      const handleAccept = async (orderId) => {
+      const handleRequestAccept = (order) => { 
+          setSelectedOrder(order); 
+      };
+      
+      const confirmAccept = async (orderId) => {
           if (!isOnline) return alert("⚠️ Debes conectarte para trabajar.");
           
           try {
               await apiCall(`/pedido/aceptar/${orderId}/`, "PATCH");
               alert("¡Pedido aceptado! Redirigiendo al mapa...");
+              setSelectedOrder(null);
               onNavigateToActiveOrder(orderId);
           } catch (error) {
               alert("Error: " + error.message);
@@ -1372,13 +1791,11 @@ function FastPrintsView({ onGoBack, onNavigateToSendReceive, onNavigateToBuyTake
 
       return (
         <div className="min-h-screen bg-gray-50 pb-20 animate-in fade-in">
-          {/* HEADER DEL DASHBOARD */}
           <header className="bg-white shadow-sm sticky top-0 z-30 border-b border-gray-100">
             <div className="max-w-3xl mx-auto px-4 py-4">
                 <div className="flex items-center justify-between mb-4">
                     <button onClick={onGoBack} className="p-2 hover:bg-gray-100 rounded-full transition-colors"><ArrowLeft /></button>
                     
-                    {/* BOTÓN INTERRUPTOR ON/OFF */}
                     <button 
                         onClick={handleToggleOnline}
                         className={`flex items-center gap-2 px-6 py-2 rounded-full font-bold transition-all shadow-sm ${isOnline ? 'bg-green-500 text-white' : 'bg-gray-200 text-gray-500'}`}
@@ -1387,7 +1804,6 @@ function FastPrintsView({ onGoBack, onNavigateToSendReceive, onNavigateToBuyTake
                     </button>
                 </div>
 
-                {/* RESUMEN DE GANANCIAS */}
                 <div className="grid grid-cols-2 divide-x divide-gray-100 mt-2">
                     <div className="text-center px-4">
                         <p className="text-xs text-gray-400 uppercase font-bold tracking-wider mb-1">Ganancia Hoy</p>
@@ -1402,14 +1818,23 @@ function FastPrintsView({ onGoBack, onNavigateToSendReceive, onNavigateToBuyTake
           </header>
 
           <main className="max-w-3xl mx-auto px-4 py-6">
-            <h2 className="text-lg font-bold text-gray-800 mb-4">
-                {isOnline ? `Pedidos Disponibles (${orders.length})` : "Estación de trabajo"}
-            </h2>
-
-            {/* ÁREA DE LISTA (Con efecto Blur si está Offline) */}
-            <div className="relative min-h-[400px]">
+            <div className="flex justify-between items-center mb-4">
+                <h2 className="text-lg font-bold text-gray-800">
+                    {isOnline ? `Pedidos Disponibles (${orders.length})` : "Estación de trabajo"}
+                </h2>
                 
-                {/* BLOQUEO OFFLINE */}
+                {/* BOTÓN DE SIMULACIÓN PUSH */}
+                {isOnline && orders.length > 0 && (
+                    <button 
+                        onClick={() => setIncomingOrder(orders[0])} 
+                        className="text-xs bg-blue-100 text-blue-800 px-3 py-1 rounded-full font-bold hover:bg-blue-200 transition-colors"
+                    >
+                        🔔 Simular Push
+                    </button>
+                )}
+            </div>
+
+            <div className="relative min-h-[400px]">
                 {!isOnline && (
                     <div className="absolute inset-0 z-10 bg-white/80 backdrop-blur-sm flex flex-col items-center justify-center text-center p-6 rounded-2xl border-2 border-dashed border-gray-200">
                         <div className="bg-gray-100 p-6 rounded-full mb-4"><span className="text-4xl">😴</span></div>
@@ -1419,7 +1844,6 @@ function FastPrintsView({ onGoBack, onNavigateToSendReceive, onNavigateToBuyTake
                     </div>
                 )}
 
-                {/* LISTA DE PEDIDOS */}
                 <div className={`space-y-4 transition-all duration-500 ${!isOnline ? 'opacity-20 pointer-events-none' : 'opacity-100'}`}>
                     {orders.length === 0 ? (
                         <div className="text-center py-16 bg-white rounded-xl border border-gray-100 shadow-sm">
@@ -1433,17 +1857,126 @@ function FastPrintsView({ onGoBack, onNavigateToSendReceive, onNavigateToBuyTake
                                     <span className="block text-2xl font-black text-gray-900">${order.costoEnvio}</span>
                                 </div>
                                 <h3 className="font-bold text-lg text-gray-800 mb-1">{order.descripcion}</h3>
-                                <p className="text-xs text-gray-500 mb-4">📍 Recoger en: {order.punto_origen_id}</p>
-                                <button onClick={() => handleAccept(order.codigoPedido)} className="w-full bg-black text-white py-3 rounded-lg font-bold hover:bg-gray-800">ACEPTAR PEDIDO</button>
+                                <p className="text-xs text-gray-500 mb-4">📍 Recoger en: {order.punto_origen}</p>
+                                <button onClick={() => handleRequestAccept(order)} className="w-full bg-black text-white py-3 rounded-lg font-bold hover:bg-gray-800">ACEPTAR PEDIDO</button>
                             </div>
                         ))
                     )}
                 </div>
             </div>
           </main>
+          
+          {/* MODAL DE CONFIRMACIÓN MANUAL */}
+          {selectedOrder && (
+              <DriverAcceptanceModal 
+                  order={selectedOrder} 
+                  onConfirm={confirmAccept} 
+                  onCancel={() => setSelectedOrder(null)} 
+              />
+          )}
         </div>
       );
     }
+
+    // Vista de Perfil del Repartidor con Historial
+    function DriverProfileView({ user, onGoBack }) {
+        const [history, setHistory] = useState([]);
+        const [loading, setLoading] = useState(true);
+
+        useEffect(() => {
+            if (user?.id) { fetchHistory(); }
+        }, [user]);
+
+        const fetchHistory = async () => {
+            setLoading(true);
+            try {
+                const data = await apiCall("/pedido/listar/");
+                const myDeliveries = data.filter(o => o.idRepartidor === user.id);
+                setHistory(myDeliveries.reverse());
+            } catch (error) { 
+                console.error("Error fetching driver history:", error); 
+            } finally { 
+                setLoading(false); 
+            }
+        };
+
+        const getCardColor = (status) => { 
+            switch (status) { 
+                case 'Entregado': return 'border-green-500'; 
+                case 'Aceptado': return 'border-orange-500'; 
+                default: return 'border-red-500'; 
+            } 
+        };
+        
+        const getBadgeColor = (status) => { 
+            switch (status) { 
+                case 'Entregado': return 'bg-green-500'; 
+                case 'Aceptado': return 'bg-orange-500'; 
+                default: return 'bg-red-500'; 
+            } 
+        };
+
+        return (
+            <div className="min-h-screen bg-white p-4 sm:p-8 animate-in fade-in duration-300">
+                <header className="max-w-4xl mx-auto mb-8 flex items-center">
+                    <button onClick={onGoBack} className="p-2 hover:bg-gray-100 rounded-full transition-colors mr-4">
+                        <ArrowLeft />
+                    </button>
+                    <h2 className="text-3xl font-bold text-black">Perfil</h2>
+                </header>
+                <main className="max-w-4xl mx-auto">
+                    <div className="flex items-center gap-6 mb-12">
+                        <div className="w-24 h-24 rounded-full bg-[#EFE6FD] flex items-center justify-center text-[#5B21B6] overflow-hidden border-4 border-white shadow-md">
+                            {user?.foto_perfil ? (
+                                <img src={user.foto_perfil} className="w-full h-full object-cover" alt="Perfil" />
+                            ) : (
+                                <User className="w-12 h-12" />
+                            )}
+                        </div>
+                        <div>
+                            <h1 className="text-3xl font-bold text-black mb-1">Hola, Repartidor.</h1>
+                            <p className="text-gray-500 text-lg">{user?.nombre} {user?.apellido}</p>
+                        </div>
+                    </div>
+                    <h3 className="text-2xl font-black text-black mb-6">Historial de entregas.</h3>
+                    {loading ? (
+                        <div className="text-center py-10 text-gray-500">Cargando historial...</div>
+                    ) : history.length === 0 ? (
+                        <div className="text-center py-10 text-gray-500 bg-gray-50 rounded-xl border border-dashed border-gray-300">
+                            <p>Aún no has realizado entregas.</p>
+                        </div>
+                    ) : (
+                        <div className="space-y-6 pb-20">
+                            {history.map(order => (
+                                <div key={order.codigoPedido} className={`bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden flex border-l-[8px] ${getCardColor(order.estado)}`}>
+                                    <div className="p-5 w-full">
+                                        <div className="flex justify-between items-start mb-2">
+                                            <h4 className="font-bold text-black text-lg">Código de pedido: {order.codigoPedido}</h4>
+                                            <span className={`px-3 py-1 rounded text-xs font-bold text-white uppercase tracking-wide ${getBadgeColor(order.estado)}`}>
+                                                {order.estado}
+                                            </span>
+                                        </div>
+                                        <p className="text-gray-800 text-sm mb-6 font-medium">{order.descripcion}</p>
+                                        <div className="flex justify-between items-center pt-4 border-t border-gray-200">
+                                            <div>
+                                                <p className="text-xs font-bold text-black uppercase mb-1">Fecha</p>
+                                                <p className="text-sm font-bold text-black">{new Date(order.fechaInicial).toLocaleDateString()}</p>
+                                            </div>
+                                            <div className="text-right">
+                                                <p className="text-xs font-bold text-black uppercase mb-1">Valor</p>
+                                                <p className="text-sm font-bold text-black">${order.costoEnvio}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </main>
+            </div>
+        );
+    }
+
 
     function MyOrdersView({ onGoBack, onNavigateToActiveOrder, currentUserId }) {
       const [orders, setOrders] = useState([]);
@@ -1470,6 +2003,7 @@ function FastPrintsView({ onGoBack, onNavigateToSendReceive, onNavigateToBuyTake
       );
     }
 
+
     function HomePage() {
       const [menuOpen, setMenuOpen] = useState(false);
       const [showAuthModal, setShowAuthModal] = useState(false);
@@ -1479,6 +2013,7 @@ function FastPrintsView({ onGoBack, onNavigateToSendReceive, onNavigateToBuyTake
       const [showUserMenu, setShowUserMenu] = useState(false); 
       // Estado para controlar el carrito/historial
       const [isCartOpen, setIsCartOpen] = useState(false);
+      const [incomingOrder, setIncomingOrder] = useState(null);
 
       const [activeOrderId, setActiveOrderId] = useState(null);
       const [ignoredOrderId, setIgnoredOrderId] = useState(null);
@@ -1498,28 +2033,35 @@ function FastPrintsView({ onGoBack, onNavigateToSendReceive, onNavigateToBuyTake
 
       const handleFinalDriverRegister = async () => {
           try {
-              // 1. Subir Foto Perfil
-              const urlPerfil = await uploadImageApi(driverRegData.fotoPerfilFile, 'perfil');
-              
-              // 2. Subir Foto Carnet
-              const urlCarnet = await uploadImageApi(driverRegData.fotoCarnetFile, 'carnet');
+              // 1. Validar que tengamos las fotos
+              if (!driverRegData.fotoPerfilFile || !driverRegData.fotoCarnetFile) {
+                  alert("Faltan fotos por cargar.");
+                  return;
+              }
 
-              // 3. Crear Usuario
+              // 2. Subir Foto Perfil a Cloudinary
+              const urlPerfil = await uploadToCloudinary(driverRegData.fotoPerfilFile, 'perfil');
+              
+              // 3. Subir Foto Carnet a Cloudinary
+              const urlCarnet = await uploadToCloudinary(driverRegData.fotoCarnetFile, 'carnet');
+
+              // 4. Crear Usuario en Backend con las URLs reales
               const payload = {
                   nombre: driverRegData.nombre,
                   apellido: driverRegData.apellido,
                   correo: driverRegData.correo,
                   contrasena: driverRegData.contrasena,
                   rol: "repartidor",
-                  foto_perfil: urlPerfil,
-                  foto_carnet: urlCarnet
-                  // Opcionales: telefono, etc.
+                  foto_perfil: urlPerfil,  // URL real
+                  foto_carnet: urlCarnet,  // URL real
+                  estado_verificacion: "Pendiente" // Se crea como pendiente
               };
 
               await apiCall("/usuario/crear/", "POST", payload);
               
-              alert("Registro completado exitosamente! Ahora inicia sesión.");
-              // Limpiar formulario y enviar a login
+              alert("✅ Registro completado exitosamente! Ahora inicia sesión.");
+              
+              // Limpiar y redirigir
               setDriverRegData({ nombre: "", apellido: "", correo: "", contrasena: "", fotoPerfilFile: null, fotoCarnetFile: null });
               setAuthMode("signin");
               setShowAuthModal(true);
@@ -1527,7 +2069,6 @@ function FastPrintsView({ onGoBack, onNavigateToSendReceive, onNavigateToBuyTake
 
           } catch (error) {
               alert("Error en el registro: " + error.message);
-              throw error; // Para que el botón de carga se detenga en la vista hija
           }
       };
 
@@ -1549,6 +2090,33 @@ function FastPrintsView({ onGoBack, onNavigateToSendReceive, onNavigateToBuyTake
 
       useEffect(() => { const token = localStorage.getItem("accessToken"); if (token) { apiCall("/usuario/me/").then(u => { setIsLoggedIn(true); setCurrentUser(u); }).catch(() => { setIsLoggedIn(false); localStorage.removeItem("accessToken"); }); } }, []);
       const handleLogout = () => { localStorage.removeItem("accessToken"); setIsLoggedIn(false); setCurrentUser(null); setShowUserMenu(false); };
+      const reloadUser = async () => {
+        const me = await apiCall("/usuario/me/");
+        setCurrentUser(me);
+      };
+
+      const handleAcceptIncoming = async (orderId) => {
+          setIncomingOrder(null); 
+          try { 
+              await apiCall(`/pedido/aceptar/${orderId}/`, "PATCH"); 
+              alert("¡Pedido aceptado! Redirigiendo al mapa..."); 
+              setActiveOrderId(orderId);
+              setCurrentView("activeOrder");
+          } catch (error) { 
+              alert("Error al aceptar: " + error.message); 
+          }
+      };
+
+      const handleOpenProfile = () => {
+          if (currentUser?.rol === 'repartidor') { 
+            setCurrentView("driverProfile"); 
+          } else { 
+            setIsProfileOpen(true); 
+          }
+      };
+
+
+
       const handleAuth = async () => {
           console.log("Intentando autenticación..."); 
           try {
@@ -1591,6 +2159,22 @@ function FastPrintsView({ onGoBack, onNavigateToSendReceive, onNavigateToBuyTake
                     setCurrentView("myOrders");
                 }}
               />
+            {/* --- MODAL EDICIÓN DE PERFIL (Estudiante) --- */}
+            {isProfileOpen && (
+                <ProfileEditModal 
+                    user={currentUser} 
+                    onClose={() => setIsProfileOpen(false)} 
+                    onUpdateUser={reloadUser}
+                />
+            )}
+
+            {/* --- MODAL NOTIFICACIÓN PUSH (Repartidor) --- */}
+            <IncomingOrderModal 
+                order={incomingOrder}   
+                onAccept={handleAcceptIncoming} 
+                onReject={() => setIncomingOrder(null)} 
+            />
+
 
               {showAuthModal && (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 animate-in fade-in duration-200"><div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm animate-in zoom-in-95 duration-200"><div className="flex items-center justify-between p-6 pb-4"><h2 className="text-xl font-semibold text-gray-800">{authMode === "signin" ? "Iniciar sesión" : "Registrarse"}</h2><button onClick={() => setShowAuthModal(false)} className="p-2 hover:bg-gray-100 rounded-full transition-colors"><X /></button></div><div className="px-6 pb-6"><div className="space-y-4">
@@ -1625,12 +2209,19 @@ function FastPrintsView({ onGoBack, onNavigateToSendReceive, onNavigateToBuyTake
       if (currentView === "driverFeed") { 
           return <DriverDashboardView 
                     onGoBack={() => setCurrentView("home")} 
-                    currentUser={currentUser} // <-- ¡IMPORTANTE! Pasamos el usuario para ver sus ganancias
+                    currentUser={currentUser}
+                    setIncomingOrder={setIncomingOrder}
                     onNavigateToActiveOrder={(id) => { setActiveOrderId(id); setCurrentView("activeOrder"); }} 
                 />; 
       }
       if (currentView === "myOrders") { return <MyOrdersView onGoBack={() => setCurrentView("home")} currentUserId={currentUser?.id} onNavigateToActiveOrder={(id) => { setActiveOrderId(id); setCurrentView("activeOrder"); }} />; }
       // Actualizacion y aniadidos de renders del registro del repartidor
+      if (currentView === "driverProfile") { 
+        return <DriverProfileView 
+          user={currentUser} 
+          onGoBack={() => setCurrentView("home")} 
+        />; 
+      }
       if (currentView === "driverRegister") { return <DriverRegisterView onGoBack={() => setCurrentView("home")} onNavigateToWelcome={() => setCurrentView("driverWelcome")} onSignIn={() => { setAuthMode("signin"); setShowAuthModal(true); }} onRegister={() => { setCurrentView("driverWelcome"); /* Vamos directo al flujo nuevo */ }} />; }
       if (currentView === "driverWelcome") { 
           return <DriverWelcomeView 
@@ -1683,8 +2274,18 @@ function FastPrintsView({ onGoBack, onNavigateToSendReceive, onNavigateToBuyTake
                 <div className="flex items-center gap-3">
                   {isLoggedIn ? (
                     <div className="relative">
-                      <button onClick={() => setShowUserMenu(!showUserMenu)} className="p-2 hover:bg-gray-100 rounded-lg transition-colors flex items-center gap-2"><User /><span className="text-sm font-medium hidden sm:block">{currentUser?.nombre || "Usuario"}</span></button>
-                      {showUserMenu && (<div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-lg shadow-xl border border-gray-100 z-50 animate-in fade-in zoom-in-95"><div className="py-1"><button className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Mi Perfil</button><button onClick={handleLogout} className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50">Cerrar Sesión</button></div></div>)}
+                      <button onClick={() => setShowUserMenu(!showUserMenu)} className="p-2 hover:bg-gray-100 rounded-lg transition-colors flex items-center gap-2">
+                        <User />
+                        <span className="text-sm font-medium hidden sm:block">{currentUser?.nombre || "Usuario"}</span>
+                      </button>
+                      {showUserMenu && (
+                        <UserMenuDropdown 
+                          user={currentUser} 
+                          onClose={() => setShowUserMenu(false)} 
+                          onLogout={handleLogout} 
+                          onOpenProfile={handleOpenProfile} 
+                        />
+                      )}
                     </div>
                   ) : (
                     <><button onClick={() => { setAuthMode("signin"); setShowAuthModal(true); }} className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">Sign in</button><button onClick={() => { setAuthMode("register"); setShowAuthModal(true); }} className="px-4 py-2 text-sm font-medium text-white bg-black hover:bg-gray-800 rounded-lg transition-colors">Register</button></>

@@ -16,6 +16,7 @@ class Usuario(AbstractUser):
     TIPOS_ROLES = (
         ('estudiante', 'Estudiante'),
         ('repartidor', 'Repartidor'),
+        ('admin', "Administrador" ),
     )
     rol = models.CharField(max_length=50, choices=TIPOS_ROLES, default='estudiante')
 
@@ -31,7 +32,19 @@ class Usuario(AbstractUser):
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = []
 
+
+    #Estado de verficacion
+    ESTADOS_VERIFICACION = (
+        ('Pendiente', 'Pendiente'), # El usuario se registro, falta revisar credencial
+        ('Aprobado', 'Aprobado'),   # El admin reviso y acepto
+        ('Rechazado', 'Rechazado'), #la credencial no es válido
+    )
+    estado_verificacion = models.CharField(
+        max_length=20, 
+        choices=ESTADOS_VERIFICACION, 
+        default='Pendiente' # por default todo usuario en pendiente
+    )
+
     #metodos
     def __str__(self):
-        return self.email
-
+        return f"{self.email} ({self.rol}) - {self.estado_verificacion}"

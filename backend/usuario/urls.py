@@ -50,4 +50,25 @@ urlpatterns = [
         UsuarioViewSet.as_view({'delete': 'destroy'}), 
         name='usuario-eliminar'
     ),
+
+    #Rutas de admin
+    # Ver lista de pendientes
+    path(
+        'api/usuario/admin/pendientes/', 
+        UsuarioViewSet.as_view({'get': 'pendientes'}), 
+        name='usuario-pendientes'
+    ),
+    # Aprobar/Rechazar un usuario específico (por ID, que se pasa directo en la ruta)
+    path(
+        'api/usuario/admin/verificar/<int:pk>/', 
+        UsuarioViewSet.as_view({'patch': 'gestionar_verificacion'}), 
+        name='usuario-gestionar-verificacion'
+    ),
+
+    # Subir Imagen, modifica al usuario logueado actual
+    path(
+        'api/usuario/subir-imagen/', 
+        UsuarioViewSet.as_view({'post': 'subir_imagen'}), 
+        name='usuario-subir-imagen'
+    ),
 ]

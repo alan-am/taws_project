@@ -15,19 +15,13 @@ from pathlib import Path
 from datetime import timedelta
 import os
 from dotenv import load_dotenv
+import cloudinary
+import cloudinary.uploader
+import cloudinary.api
 
-# 1. Definir la ruta base del proyecto
-BASE_DIR = Path(__file__).resolve().parent.parent
+# Cargar variables del archivo .env
+load_dotenv()
 
-# 2. COPIA ESTO TAL CUAL: Construir la ruta explícita al archivo .env
-env_path = BASE_DIR / '.env'
-
-# 3. Cargar el archivo forzando esa ruta
-load_dotenv(dotenv_path=env_path)
-
-# --- VERIFICACIÓN (Opcional: imprime en consola para ver si funcionó) ---
-print(f"Buscando .env en: {env_path}")
-print(f"Usuario cargado: {os.getenv('DB_USER')}")
 
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -180,3 +174,12 @@ SIMPLE_JWT = {
 
 # Config del cors, por el momento abierto para todos
 CORS_ALLOW_ALL_ORIGINS = True
+
+
+#Config de cloudinary
+cloudinary.config( 
+  cloud_name = os.getenv('CLOUD_NAME'), 
+  api_key = os.getenv('CLOUD_API_KEY'), 
+  api_secret = os.getenv('CLOUD_API_SECRET'),
+  secure = True
+)

@@ -19,13 +19,16 @@ class PedidoSerializer(serializers.ModelSerializer):
             'repartidor_nombre',
             'num_whats',
             'descripcion',
-            'punto_origen_id',
-            'punto_desitno_id',
+            'punto_origen',
+            'punto_destino',
             'estado',
             'fechaInicial',
             'horaDeseada',
             'fechaFinal',
             'costoEnvio',
+            'archivo_pdf',
+            'formato_color',
+            'codigo_entrega',
         ]
         read_only_fields = ['idCliente']
         #extra_kwargs = {

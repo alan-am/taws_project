@@ -31,9 +31,11 @@ class UsuarioSerializer(serializers.ModelSerializer):
             'rol',           
             'foto_perfil',   
             'foto_carnet',   
-            'contrasena',      
+            'contrasena',   
+            'estado_verificacion'   
         ]
-
+        #verificacion en solo lectura
+        read_only_fields = ['estado_verificacion'] 
     def create(self, validated_data):
         """
         Crea y retorna un nuevo usuario, hasheando la contraseña.
@@ -68,4 +70,7 @@ class UsuarioSerializer(serializers.ModelSerializer):
         return instance
 
 
-
+# Serializer simple solo para recibir la imagen
+class ImagenUploadSerializer(serializers.Serializer):
+    imagen = serializers.ImageField()
+    tipo = serializers.ChoiceField(choices=[('perfil', 'Foto de Perfil'), ('carnet', 'Foto de Carnet')])

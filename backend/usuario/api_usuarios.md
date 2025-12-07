@@ -15,6 +15,59 @@ Esta API maneja la creación, autenticación y gestión de usuarios en el sistem
 
 El sistema usa JSON Web Tokens (JWT) para manejar la autenticación. El token de acceso tiene una duración de **360 minutos** (6 horas). Después de eso, el usuario tendrá que loguearse de nuevo.
 
+
+
+## Endpoints de Administración (Solo Admin)
+Estos endpoints están restringidos únicamente a usuarios con el rol admin.
+
+### 1. Listar Usuarios Pendientes Obtiene la lista de usuarios que se han registrado pero aún no han sido verificados (estado Pendiente).
+Método: GET
+
+Endpoint: /api/usuario/admin/pendientes/
+
+Permisos: IsAdminRol (Requiere token de un usuario Admin)
+
+Respuesta Exitosa (200 OK):
+  ```json
+  {
+    "id": 5,
+    "nombre_usuario": "juan_p",
+    "correo": "juan@correo.com",
+    "nombre": "Juan",
+    "apellido": "Perez",
+    "rol": "repartidor",
+    "estado_verificacion": "Pendiente",
+    "foto_carnet": "[http://example.com/carnet_juan.jpg](http://example.com/carnet_juan.jpg)"
+  }
+```
+### 2. Verificar Identidad (Aprobar/Rechazar)
+Permite a un administrador cambiar el estado de verificación de un usuario.
+
+Método: PATCH
+
+Endpoint: /api/usuario/adminverificar/<? id>/
+
+Ejemplo: /api/usuario/admin/verificar/5/
+
+Permisos: IsAdminRol
+
+Cuerpo de Petición(Request Body):
+ ```json
+ {
+  "estado": "Aprobado" 
+}
+```
+Valores permitidos: "Aprobado", "Rechazado", "Pendiente".
+
+Respuesta Exitosa (200 OK)
+```
+{
+  "mensaje": "Usuario juan@correo.com actualizado exitosamente.",
+  "nuevo_estado": "Aprobado"
+} 
+```
+
+
 ### 1. Obtener Token (Login)
 
 Autentica a un usuario y devuelve un par de tokens (acceso y refresco).
@@ -239,3 +292,27 @@ Elimina un usuario del sistema de forma permanente.
 * **Permisos:** `IsAuthenticated` (Requiere token)
 * **Respuesta Exitosa (204 No Content):**
     * No se devuelve ningún contenido en el cuerpo de la respuesta.
+---
+### Subir Imagen (Helper Público)
+
+Sube una imagen a la nube (Cloudinary) y retorna la URL segura. Este endpoint no requiere autenticación y no modifica ningún usuario. Su único propósito es obtener una URL para luego usarla en el registro.
+
+* **Método:** `POST`
+* **Endpoint:** `/api/usuario/subir-imagen/`
+* **Permisos:** `AllowAny`(Publico)
+* **Tipo de peticion(contenido):** `multipart/form-data`(no es json)
+* **Parametros(form-data):**
+    imagen : el archivo de la imagen(jpg, png, jpeg)
+    tipo:  Texto que indica la carpeta de destino. Valores sugeridos: 'perfil' o 'carnet'
+
+
+* **Respuesta Exitosa (200 OK):**
+    ```json
+    {
+      "mensaje": "Imagen subida exitosamente",
+      "url": "https://res.cloudinary.com/tu-cloud/image/upload/v12345/polipedidos/uploads/perfil/img_uuid.jpg",
+      "tipo": "perfil"
+    }
+    ```
+
+    Uso Recomendado: El frontend debe llamar a este endpoint primero, guardar la url recibida, y luego enviarla en el cuerpo del  endpoint de registro 

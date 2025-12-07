@@ -1,12 +1,34 @@
+# pedidos/urls.py
 from django.urls import path
 from rest_framework import routers
 from .api import PedidoViewSet
 
-router = routers.DefaultRouter()
-router.register('api/pedido', PedidoViewSet, "pedido")  # CRUD automático
 
 urlpatterns = [
-    # Listar
+    #Lista los pedidos que aun no han sido aceptados
+    path(
+        'api/pedido/publicados/',
+        PedidoViewSet.as_view({'get': 'publicados'}),
+        name='pedido-publicados'
+    ),
+    #Endpoints codigo OTP - flujo de entrega
+    # Aceptar Pedido (Genera OTP), lleva el id del pedido aceptado en la ruta
+    path(
+        'api/pedido/aceptar/<int:pk>/',
+        PedidoViewSet.as_view({'patch': 'aceptar_pedido'}),
+        name='pedido-aceptar'
+    ),
+    # Finalizar Entrega (Valida OTP)
+    # POST /api/pedido/finalizar/1/  Body: { "otp": "xxxx" }
+    path(
+        'api/pedido/finalizar/<int:pk>/',
+        PedidoViewSet.as_view({'post': 'finalizar_entrega'}),
+        name='pedido-finalizar'
+    ),
+
+
+    # endpoitns CRUD
+    #listar
     path(
         'api/pedido/listar/',
         PedidoViewSet.as_view({'get': 'list'}),
@@ -40,7 +62,4 @@ urlpatterns = [
         PedidoViewSet.as_view({'delete': 'destroy'}),
         name='pedido-eliminar'
     ),
-    path('api/pedido/aceptar/<int:pk>/', PedidoViewSet.as_view({'patch': 'aceptar_pedido'}), name='pedido-aceptar'),
-    path('api/pedido/simular-aceptacion/<int:pk>/', PedidoViewSet.as_view({'post': 'simular_aceptacion'}), name='simular-aceptacion'),
-    path('api/pedido/simular-entrega/<int:pk>/', PedidoViewSet.as_view({'post': 'simular_entrega'}), name='simular-entrega'),
 ]
