@@ -425,24 +425,25 @@
         );
     }
 
-// --- REEMPLAZA TU FUNCIÓN MapComponent POR ESTA ---
+
+// --- VERSIÓN GRATUITA CORREGIDA ---
     function MapComponent({ onLocationSelect, mapId, routeStart, routeEnd }) {
       const mapRef = useRef(null);
       const startMarkerRef = useRef(null);
       const endMarkerRef = useRef(null);
       const routingControlRef = useRef(null);
+      const polylineFallbackRef = useRef(null); // Línea de respaldo
       const onSelectRef = useRef(onLocationSelect);
 
-      // Iconos (Sin cambios)
+      // Iconos
       const iconBlue = new L.Icon({ iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-blue.png', shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41] });
       const iconGreen = new L.Icon({ iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-green.png', shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41] });
 
       useEffect(() => { onSelectRef.current = onLocationSelect; }, [onLocationSelect]);
 
-      // 1. INICIALIZACIÓN DEL MAPA (VOLVEMOS A OPENSTREETMAP)
+      // 1. INICIALIZAR EL MAPA (OpenStreetMap - GRATIS)
       useEffect(() => {
         if (mapRef.current) return;
-        
         const containerId = mapId || "default-map";
         if (!document.getElementById(containerId)) return;
 
@@ -450,7 +451,6 @@
         const map = L.map(containerId).setView(ESPOL_COORDS, 16);
         mapRef.current = map;
 
-        // CAMBIO AQUÍ: Usamos OpenStreetMap (Gratis y sin Token) en vez de Mapbox
         L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { 
             attribution: "© OpenStreetMap", 
             maxZoom: 19 
@@ -463,63 +463,56 @@
             }
         });
 
-        return () => { 
-            if (mapRef.current) { 
-                mapRef.current.remove(); 
-                mapRef.current = null; 
-            } 
-        };
+        return () => { if (mapRef.current) { mapRef.current.remove(); mapRef.current = null; } };
       }, [mapId]);
 
-      // 2. CONTROL DE MARCADORES (IGUAL QUE ANTES)
+      // 2. MARCADORES
       useEffect(() => {
-         const map = mapRef.current;
-         if (!map) return;
+        const map = mapRef.current;
+        if (!map) return;
 
-         if (routeStart) {
-             if (startMarkerRef.current) startMarkerRef.current.setLatLng([routeStart.lat, routeStart.lng]);
-             else startMarkerRef.current = L.marker([routeStart.lat, routeStart.lng], { icon: iconBlue }).addTo(map).bindPopup("Recogida");
-             if (!routeEnd) map.panTo([routeStart.lat, routeStart.lng]);
-         } else if (startMarkerRef.current) {
-             startMarkerRef.current.remove(); startMarkerRef.current = null;
-         }
+        if (routeStart) {
+            if (startMarkerRef.current) startMarkerRef.current.setLatLng([routeStart.lat, routeStart.lng]);
+            else startMarkerRef.current = L.marker([routeStart.lat, routeStart.lng], { icon: iconBlue }).addTo(map).bindPopup("Recogida");
+            if (!routeEnd) map.panTo([routeStart.lat, routeStart.lng]);
+        } else if (startMarkerRef.current) {
+            startMarkerRef.current.remove(); startMarkerRef.current = null;
+        }
 
-         if (routeEnd) {
-             if (endMarkerRef.current) endMarkerRef.current.setLatLng([routeEnd.lat, routeEnd.lng]);
-             else endMarkerRef.current = L.marker([routeEnd.lat, routeEnd.lng], { icon: iconGreen }).addTo(map).bindPopup("Entrega");
-         } else if (endMarkerRef.current) {
-             endMarkerRef.current.remove(); endMarkerRef.current = null;
-         }
+        if (routeEnd) {
+            if (endMarkerRef.current) endMarkerRef.current.setLatLng([routeEnd.lat, routeEnd.lng]);
+            else endMarkerRef.current = L.marker([routeEnd.lat, routeEnd.lng], { icon: iconGreen }).addTo(map).bindPopup("Entrega");
+        } else if (endMarkerRef.current) {
+            endMarkerRef.current.remove(); endMarkerRef.current = null;
+        }
       }, [routeStart, routeEnd]);
 
-      // 3. RUTA (VOLVEMOS A OSRM POR DEFECTO)
+      // 3. RUTA + LÍNEA DE RESPALDO (Sin Token)
       useEffect(() => {
           const map = mapRef.current;
           if (!map) return;
 
-          // Limpiar ruta anterior
-          if (routingControlRef.current) {
-              try { map.removeControl(routingControlRef.current); } catch(e){}
-              routingControlRef.current = null;
-          }
+          if (routingControlRef.current) { try { map.removeControl(routingControlRef.current); } catch(e){} routingControlRef.current = null; }
+          if (polylineFallbackRef.current) { map.removeLayer(polylineFallbackRef.current); polylineFallbackRef.current = null; }
 
           if (routeStart && routeEnd) {
               const p1 = L.latLng(routeStart.lat, routeStart.lng);
               const p2 = L.latLng(routeEnd.lat, routeEnd.lng);
 
-              // CAMBIO AQUÍ: Quitamos la configuración de Mapbox y dejamos la básica
+              // A. Línea Punteada (Garantía visual)
+              polylineFallbackRef.current = L.polyline([p1, p2], {
+                  color: 'black', dashArray: '5, 10', weight: 3, opacity: 0.6
+              }).addTo(map);
+
+              // B. Zoom Automático
+              map.fitBounds(L.latLngBounds([p1, p2]), { padding: [50, 50] });
+
+              // C. Intento de Ruta real (Servidor Gratis OSRM)
               try {
                   routingControlRef.current = L.Routing.control({
                       waypoints: [p1, p2],
-                      // Al no poner "router", usa el servidor público gratuito por defecto
-                      lineOptions: {
-                          styles: [{ color: 'black', opacity: 0.8, weight: 6 }] 
-                      },
-                      show: false, 
-                      addWaypoints: false, 
-                      draggableWaypoints: false, 
-                      fitSelectedRoutes: true,
-                      createMarker: () => null 
+                      lineOptions: { styles: [{ color: 'black', opacity: 0.8, weight: 6 }] },
+                      show: false, addWaypoints: false, draggableWaypoints: false, fitSelectedRoutes: false, createMarker: () => null 
                   }).addTo(map);
               } catch (e) { console.error("Error ruta:", e); }
           }
@@ -664,22 +657,52 @@
       );
     }
 
-  
-    function FastPrintsView({ onGoBack, onNavigateToSendReceive, onNavigateToBuyTake }) {
+function FastPrintsView({ onGoBack, onNavigateToSendReceive, onNavigateToBuyTake }) {
       const [isModalOpen, setIsModalOpen] = useState(false);
       const [fecha, setFecha] = useState("");
       const [recogida, setRecogida] = useState("");
       const [entrega, setEntrega] = useState("");
       const [hora, setHora] = useState("");
       const [activeField, setActiveField] = useState("recogida"); 
-      const isInfoValid = fecha.trim() !== "" && recogida.trim() !== "" && entrega.trim() !== "" && hora.trim() !== "";
-      
-      const [pages, setPages] = useState("");
+      // Estados para Impresión
       const [copies, setCopies] = useState("1");
       const [color, setColor] = useState("Color");
       const [fileName, setFileName] = useState(null);
       const fileInputRef = useRef(null);
       const [openDropdown, setOpenDropdown] = useState(null);
+
+      // Estados para Cotización
+      const [distanciaKm, setDistanciaKm] = useState(0);
+      const [costoEnvio, setCostoEnvio] = useState(0);
+      const [totalPagar, setTotalPagar] = useState(0);
+      
+      // --- CÁLCULO EN TIEMPO REAL ---
+      useEffect(() => {
+          // 1. Calcular Distancia
+          const coord1 = parseCoordinates(recogida);
+          const coord2 = parseCoordinates(entrega);
+          let dist = 0;
+          if (coord1 && coord2) {
+              dist = getDistanceFromLatLonInKm(coord1.lat, coord1.lng, coord2.lat, coord2.lng);
+          } else if (recogida && entrega) {
+              dist = 1.0; // Distancia default si es texto
+          }
+          setDistanciaKm(dist);
+
+          // 2. Calcular Precio (Envío + Impresión)
+          // Fórmula Envío: Base $0.50 + $0.25 por Km
+          const precioEnvio = 0.50 + (dist * 0.25);
+          
+          // Fórmula Impresión: $0.10 (B/N) o $0.25 (Color) por copia
+          const precioCopia = color === "Color" ? 0.25 : 0.10;
+          const totalImpresion = parseInt(copies || 0) * precioCopia;
+
+          setCostoEnvio(precioEnvio);
+          setTotalPagar(precioEnvio + totalImpresion);
+
+      }, [recogida, entrega, copies, color]);
+
+      const isInfoValid = fecha && recogida && entrega && hora && fileName;
       
       const handleUploadClick = () => fileInputRef.current.click();
       const handleFileSelect = (event) => { if(event.target.files[0]) setFileName(event.target.files[0].name); };
@@ -690,73 +713,106 @@
       const handleSubmitPrint = async () => {
           try {
               if (!localStorage.getItem("accessToken")) { alert("Debes iniciar sesión."); return; }
-              const descripcion = `IMPRESIÓN: ${fileName || "Sin archivo"} (${copies} copias, ${color}) \nRECOGER EN: ${recogida} \nENTREGAR EN: ${entrega}`;
-              await apiCall("/pedido/crear/", "POST", {
-                  num_whats: "0999999999", descripcion, punto_origen_id: 1, punto_desitno_id: 1,
-                  horaDeseada: new Date().toISOString(), fechaInicial: new Date().toISOString(),
-                  costoEnvio: 1.50, estado: "Publicado"
+              const descripcion = `IMPRESIÓN: ${fileName} (${copies} copias, ${color}) \nRECOGER: ${recogida} \nENTREGAR: ${entrega}`;
+              
+              await apiCall("/pedido/crear/", "POST", { 
+                  num_whats: "0999999999", 
+                  descripcion, 
+                  punto_origen_id: 1, 
+                  punto_desitno_id: 1, 
+                  horaDeseada: new Date().toISOString(), 
+                  fechaInicial: new Date().toISOString(), 
+                  costoEnvio: totalPagar.toFixed(2), 
+                  estado: "Publicado" 
               });
               alert("✅ Orden de impresión enviada."); onGoBack();
           } catch (error) { alert("Error: " + error.message); }
       };
 
       return (
-        <div className="min-h-screen bg-gray-50 p-4 sm:p-8 animate-in fade-in duration-300">
+        <div className="min-h-screen bg-white p-4 sm:p-8 animate-in fade-in duration-300">
           <div className="w-full max-w-6xl mx-auto">
             <div className="flex items-center justify-between mb-6">
               <button onClick={onGoBack} className="p-2 hover:bg-gray-100 rounded-full transition-colors"><ArrowLeft /></button>
               <div className="flex gap-2">
-                <button onClick={onNavigateToSendReceive} className="px-5 py-2 bg-gray-200 text-gray-800 rounded-full font-medium text-sm hover:bg-gray-300 transition-colors">Enviar/Recoger</button>
-                <button className="px-5 py-2 bg-black text-white rounded-full font-medium text-sm">Impresiones rápidas</button>
-                <button onClick={onNavigateToBuyTake} className="px-5 py-2 bg-gray-200 text-gray-800 rounded-full font-medium text-sm hover:bg-gray-300 transition-colors">Comprar/LLevar</button>
+                  <button onClick={onNavigateToSendReceive} className="px-5 py-2 bg-gray-200 text-gray-800 rounded-full font-medium text-sm hover:bg-gray-300 transition-colors">Enviar/Recoger</button>
+                  <button className="px-5 py-2 bg-black text-white rounded-full font-medium text-sm">Impresiones rápidas</button>
+                  <button onClick={onNavigateToBuyTake} className="px-5 py-2 bg-gray-200 text-gray-800 rounded-full font-medium text-sm hover:bg-gray-300 transition-colors">Comprar/LLevar</button>
               </div>
               <div className="w-10 h-10"></div>
             </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="flex flex-col gap-6">
-                <div className="bg-white rounded-2xl shadow-2xl p-6">
-                  <h2 className="text-3xl font-bold text-gray-800 mb-6">Información</h2>
+                <div className="bg-white rounded-2xl shadow-lg p-6">
+                  <h2 className="text-3xl font-bold text-gray-800 mb-6">Detalles del Pedido</h2>
                   <div className="space-y-4">
                     <input type="text" placeholder="Fecha" onFocus={(e)=>e.target.type="date"} onBlur={(e)=>e.target.type="text"} className="w-full px-4 py-3 bg-gray-100 rounded-lg outline-none" value={fecha} onChange={(e)=>setFecha(e.target.value)}/>
+                    
                     <div className={`transition-all rounded-lg ${activeField === "recogida" ? "ring-2 ring-blue-500" : ""}`}>
-                        <input type="text" placeholder="📍 ¿Dónde se imprime? (Recogida)" className="w-full px-4 py-3 bg-gray-100 rounded-lg outline-none border border-transparent focus:bg-white" value={recogida} onChange={(e)=>setRecogida(e.target.value)} onFocus={() => setActiveField("recogida")} />
+                        <input type="text" placeholder="📍 ¿Dónde se imprime? (Papelería)" className="w-full px-4 py-3 bg-gray-100 rounded-lg outline-none border border-transparent focus:bg-white" value={recogida} onChange={(e)=>setRecogida(e.target.value)} onFocus={() => setActiveField("recogida")} />
                     </div>
+                    
                     <div className={`transition-all rounded-lg ${activeField === "entrega" ? "ring-2 ring-green-500" : ""}`}>
-                        <input type="text" placeholder="🏁 ¿Dónde te lo llevan? (Entrega)" className="w-full px-4 py-3 bg-gray-100 rounded-lg outline-none border border-transparent focus:bg-white" value={entrega} onChange={(e)=>setEntrega(e.target.value)} onFocus={() => setActiveField("entrega")} />
+                        <input type="text" placeholder="🏁 ¿Dónde te lo llevan? (Tu ubicación)" className="w-full px-4 py-3 bg-gray-100 rounded-lg outline-none border border-transparent focus:bg-white" value={entrega} onChange={(e)=>setEntrega(e.target.value)} onFocus={() => setActiveField("entrega")} />
                     </div>
+                    
                     <input type="text" placeholder="Hora de Entrega Deseada" onFocus={(e)=>e.target.type="time"} onBlur={(e)=>e.target.type="text"} className="w-full px-4 py-3 bg-gray-100 rounded-lg outline-none" value={hora} onChange={(e)=>setHora(e.target.value)}/>
-                    <button onClick={() => setIsModalOpen(true)} disabled={!isInfoValid} className={`w-full py-3 rounded-lg font-medium text-white transition-colors ${isInfoValid ? "bg-black hover:bg-gray-800" : "bg-gray-200 text-gray-500 cursor-not-allowed"}`}>Confirmar</button>
                   </div>
                 </div>
-                <div className="bg-white rounded-2xl shadow-2xl p-6">
-                  <h3 className="text-xl font-semibold text-gray-800 mb-4">Configuración</h3>
+
+                <div className="bg-white rounded-2xl shadow-lg p-6">
+                  <h3 className="text-xl font-semibold text-gray-800 mb-4">Configuración de Archivo</h3>
                   <div className="space-y-4">
                     <input type="file" ref={fileInputRef} onChange={handleFileSelect} style={{ display: "none" }} accept=".pdf,.doc,.docx" />
-                    <button onClick={handleUploadClick} className="w-full bg-gray-100 text-gray-700 py-3 rounded-lg font-medium hover:bg-gray-200 border border-dashed border-gray-300">{fileName ? `📄 ${fileName}` : "Subir Archivo"}</button>
-                    <div className="relative">
-                        <button onClick={()=>toggleDropdown("color")} className="w-full flex justify-between items-center px-4 py-3 bg-gray-100 rounded-lg mt-1"><span>{color}</span><ChevronDown/></button>
-                        {openDropdown === "color" && <DropdownMenu options={["Color", "Blanco y Negro"]} onSelect={handleSelect(setColor)}/>}
+                    <button onClick={handleUploadClick} className="w-full bg-gray-100 text-gray-700 py-3 rounded-lg font-medium hover:bg-gray-200 border border-dashed border-gray-300">{fileName ? `📄 ${fileName}` : "Subir Archivo (.pdf, .docx)"}</button>
+                    
+                    <div className="flex gap-4">
+                        <div className="relative w-1/2">
+                            <button onClick={()=>toggleDropdown("color")} className="w-full flex justify-between items-center px-4 py-3 bg-gray-100 rounded-lg"><span>{color}</span><ChevronDown/></button>
+                            {openDropdown === "color" && <DropdownMenu options={["Color", "Blanco y Negro"]} onSelect={handleSelect(setColor)}/>}
+                        </div>
+                        <input type="number" min="1" value={copies} onChange={(e)=>setCopies(e.target.value)} className="w-1/2 px-4 py-3 bg-gray-100 rounded-lg text-center" placeholder="Copias"/>
                     </div>
-                    <input type="number" min="1" value={copies} onChange={(e)=>setCopies(e.target.value)} className="w-full px-4 py-3 bg-gray-100 rounded-lg mt-1" placeholder="Copias"/>
+
+                    {/* --- COTIZACIÓN EN VIVO --- */}
+                    <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 flex justify-between items-center mt-2 animate-in fade-in">
+                        <div>
+                            <p className="text-xs text-gray-500 font-bold uppercase">Total Estimado</p>
+                            <p className="text-xs text-gray-400 mt-1">Envío: ${costoEnvio.toFixed(2)} + Impresión</p>
+                        </div>
+                        <div className="text-right">
+                            <span className="text-3xl font-black text-black">${totalPagar.toFixed(2)}</span>
+                        </div>
+                    </div>
+
+                    <button onClick={() => setIsModalOpen(true)} disabled={!isInfoValid} className={`w-full py-3 rounded-lg font-medium text-white transition-colors mt-2 ${isInfoValid ? "bg-black hover:bg-gray-800" : "bg-gray-200 text-gray-500 cursor-not-allowed"}`}>Confirmar Pedido</button>
                   </div>
                 </div>
               </div>
+
               <div className="flex flex-col gap-6 h-full">
-                <div className={`bg-white rounded-2xl shadow-2xl overflow-hidden relative h-full min-h-[400px] border-4 transition-colors ${activeField === "recogida" ? "border-blue-100" : "border-green-100"}`}>
-                   <MapComponent onLocationSelect={handleMapSelection} mapId="mapa-impresiones" />
+                <div className={`bg-white rounded-2xl shadow-lg overflow-hidden relative h-full min-h-[400px] border-4 transition-colors ${activeField === "recogida" ? "border-blue-100" : "border-green-100"}`}>
+                   {/* AQUÍ CONECTAMOS EL MAPA CON LAS COORDENADAS */}
+                   <MapComponent 
+                        onLocationSelect={handleMapSelection} 
+                        mapId="mapa-impresiones" 
+                        routeStart={parseCoordinates(recogida)} 
+                        routeEnd={parseCoordinates(entrega)} 
+                   />
                    <div className={`absolute bottom-4 right-4 backdrop-blur px-4 py-2 rounded-lg shadow-md text-xs font-bold z-[400] pointer-events-none border transition-colors ${activeField === "recogida" ? "bg-blue-50 text-blue-700 border-blue-200" : "bg-green-50 text-green-700 border-green-200"}`}>
-                      {activeField === "recogida" ? "📍 Seleccionando: Dónde IMPRIMIR" : "🏁 Seleccionando: Dónde ENTREGAR"}
+                       {activeField === "recogida" ? "📍 Seleccionando: Dónde IMPRIMIR" : "🏁 Seleccionando: Dónde ENTREGAR"}
                    </div>
                 </div>
               </div>
             </div> 
           </div>
-          {isModalOpen && <ConfirmacionModal onClose={() => setIsModalOpen(false)} servicio="Impresiones Rápidas" desde={recogida} hasta={entrega} hora={hora} onConfirmAction={handleSubmitPrint} costoBase={1.50} />}
+          {isModalOpen && <ConfirmacionModal onClose={() => setIsModalOpen(false)} servicio="Impresiones Rápidas" desde={recogida} hasta={entrega} hora={hora} onConfirmAction={handleSubmitPrint} costoBase={totalPagar} />}
         </div>
       );
     }
 
-    function BuyTakeView({ onGoBack, onNavigateToSendReceive, onNavigateToFastPrints }) {
+ function BuyTakeView({ onGoBack, onNavigateToSendReceive, onNavigateToFastPrints }) {
       const [storeName, setStoreName] = useState("");
       const [storeAddress, setStoreAddress] = useState("");
       const [deliveryPoint, setDeliveryPoint] = useState("");
@@ -765,19 +821,39 @@
       const [items, setItems] = useState([]); 
       const [nextId, setNextId] = useState(1);
       const [isModalOpen, setIsModalOpen] = useState(false);
+      
+      // Estados Cotización
+      const [distanciaKm, setDistanciaKm] = useState(0);
+      const [costoEnvio, setCostoEnvio] = useState(0);
+      const [totalFinal, setTotalFinal] = useState(0);
+
+      // Total solo de productos (Suma de la lista)
+      const totalProductos = items.reduce((sum, item) => sum + ((parseFloat(item.cost) || 0) * (parseInt(item.quantity) || 1)), 0);
+
+      // --- CÁLCULO EN TIEMPO REAL ---
+      useEffect(() => {
+          // 1. Calcular Distancia
+          const coord1 = parseCoordinates(storeAddress);
+          const coord2 = parseCoordinates(deliveryPoint);
+          let dist = 0;
+          if (coord1 && coord2) {
+              dist = getDistanceFromLatLonInKm(coord1.lat, coord1.lng, coord2.lat, coord2.lng);
+          } else if (storeAddress && deliveryPoint) {
+              dist = 1.0; 
+          }
+          setDistanciaKm(dist);
+
+          // 2. Calcular Envío (Tarifa un poco más alta por ser compras: Base $0.75 + $0.30/km)
+          const tarifaEnvio = 0.75 + (dist * 0.30);
+          setCostoEnvio(tarifaEnvio);
+          setTotalFinal(totalProductos + tarifaEnvio);
+
+      }, [storeAddress, deliveryPoint, totalProductos]);
+
       const isInfoValid = storeName && storeAddress && deliveryPoint && whatsapp;
       const areItemsValid = items.length > 0 && items.every(i => i.description && i.quantity > 0);
 
-      const totalEstimadoProductos = items.reduce((sum, item) => {
-          const costo = parseFloat(item.cost) || 0;
-          const cantidad = parseInt(item.quantity) || 1;
-          return sum + (costo * cantidad);
-      }, 0);
-
-      const handleMapSelection = (coordTexto) => {
-          if (activeField === "store") setStoreAddress(coordTexto);
-          else setDeliveryPoint(coordTexto);
-      };
+      const handleMapSelection = (coordTexto) => { if (activeField === "store") setStoreAddress(coordTexto); else setDeliveryPoint(coordTexto); };
       const handleAddItem = () => { setItems([...items, { id: nextId, description: "", quantity: 1, cost: "" }]); setNextId(nextId + 1); };
       const handleDeleteItem = (id) => setItems(items.filter(i => i.id !== id));
       const handleItemChange = (id, field, value) => { setItems(curr => curr.map(i => i.id === id ? { ...i, [field]: value } : i)); };
@@ -788,11 +864,15 @@
               const listaTexto = items.map(i => `- ${i.quantity}x ${i.description} (Est: $${i.cost || "?"})`).join("\n");
               const descripcion = `COMPRAR: ${storeName} (${storeAddress}) -> Entregar: ${deliveryPoint}\nLISTA:\n${listaTexto}`;
               
-              await apiCall("/pedido/crear/", "POST", {
-                  num_whats: whatsapp, descripcion, punto_origen_id: 1, punto_desitno_id: 1,
-                  horaDeseada: new Date().toISOString(), fechaInicial: new Date().toISOString(),
-                  costoEnvio: (totalEstimadoProductos + 2.25).toFixed(2), 
-                  estado: "Publicado"
+              await apiCall("/pedido/crear/", "POST", { 
+                  num_whats: whatsapp, 
+                  descripcion, 
+                  punto_origen_id: 1, 
+                  punto_desitno_id: 1, 
+                  horaDeseada: new Date().toISOString(), 
+                  fechaInicial: new Date().toISOString(), 
+                  costoEnvio: totalFinal.toFixed(2), // Precio total calculado
+                  estado: "Publicado" 
               });
               alert("✅ Pedido de compra creado."); onGoBack();
           } catch (e) { alert("Error: " + e.message); }
@@ -804,9 +884,9 @@
             <div className="flex items-center justify-between mb-6">
               <button onClick={onGoBack} className="p-2 hover:bg-gray-100 rounded-full"><ArrowLeft /></button>
               <div className="flex gap-2">
-                <button onClick={onNavigateToSendReceive} className="px-5 py-2 bg-gray-200 text-gray-800 rounded-full font-medium text-sm hover:bg-gray-300">Enviar/Recoger</button>
-                <button onClick={onNavigateToFastPrints} className="px-5 py-2 bg-gray-200 text-gray-800 rounded-full font-medium text-sm hover:bg-gray-300">Impresiones rápidas</button>
-                <button className="px-5 py-2 bg-black text-white rounded-full font-medium text-sm">Comprar/Llevar</button>
+                  <button onClick={onNavigateToSendReceive} className="px-5 py-2 bg-gray-200 text-gray-800 rounded-full font-medium text-sm hover:bg-gray-300">Enviar/Recoger</button>
+                  <button onClick={onNavigateToFastPrints} className="px-5 py-2 bg-gray-200 text-gray-800 rounded-full font-medium text-sm hover:bg-gray-300">Impresiones rápidas</button>
+                  <button className="px-5 py-2 bg-black text-white rounded-full font-medium text-sm">Comprar/Llevar</button>
               </div>
               <div className="w-10 h-10"></div>
             </div>
@@ -814,20 +894,29 @@
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
               <div className="bg-white rounded-2xl shadow-lg p-6 space-y-4 h-full">
                 <h2 className="text-3xl font-bold text-gray-800 mb-4">Información</h2>
-                <input type="text" placeholder="Nombre de la Tienda" className="w-full px-4 py-3 bg-gray-100 rounded-lg outline-none" value={storeName} onChange={e=>setStoreName(e.target.value)}/>
+                <input type="text" placeholder="Nombre de la Tienda (Ej: Comedor Ficticio)" className="w-full px-4 py-3 bg-gray-100 rounded-lg outline-none" value={storeName} onChange={e=>setStoreName(e.target.value)}/>
+                
                 <div className={`transition-all rounded-lg ${activeField === "store" ? "ring-2 ring-blue-500" : ""}`}>
                     <input type="text" placeholder="📍 Dirección Tienda (Toca para mapa)" className="w-full px-4 py-3 bg-gray-100 rounded-lg outline-none border border-transparent focus:bg-white" value={storeAddress} onChange={e=>setStoreAddress(e.target.value)} onFocus={() => setActiveField("store")} />
                 </div>
+                
                 <div className={`transition-all rounded-lg ${activeField === "delivery" ? "ring-2 ring-green-500" : ""}`}>
                     <input type="text" placeholder="🏁 Punto de Entrega (Toca para mapa)" className="w-full px-4 py-3 bg-gray-100 rounded-lg outline-none border border-transparent focus:bg-white" value={deliveryPoint} onChange={e=>setDeliveryPoint(e.target.value)} onFocus={() => setActiveField("delivery")} />
                 </div>
+                
                 <input type="tel" placeholder="Tu Whatsapp" className="w-full px-4 py-3 bg-gray-100 rounded-lg outline-none" value={whatsapp} onChange={e=>setWhatsapp(e.target.value)}/>
               </div>
 
               <div className={`bg-white rounded-2xl shadow-lg overflow-hidden relative min-h-[400px] border-4 transition-colors ${activeField === "store" ? "border-blue-100" : "border-green-100"}`}>
-                 <MapComponent onLocationSelect={handleMapSelection} mapId="mapa-compras" />
+                 {/* MAPA CONECTADO */}
+                 <MapComponent 
+                    onLocationSelect={handleMapSelection} 
+                    mapId="mapa-compras" 
+                    routeStart={parseCoordinates(storeAddress)} 
+                    routeEnd={parseCoordinates(deliveryPoint)}
+                 />
                  <div className={`absolute bottom-4 right-4 backdrop-blur px-4 py-2 rounded-lg shadow-md text-xs font-bold z-[400] pointer-events-none border transition-colors ${activeField === "store" ? "bg-blue-50 text-blue-700 border-blue-200" : "bg-green-50 text-green-700 border-green-200"}`}>
-                    {activeField === "store" ? "📍 Seleccionando: TIENDA" : "🏁 Seleccionando: ENTREGA"}
+                     {activeField === "store" ? "📍 Seleccionando: TIENDA" : "🏁 Seleccionando: ENTREGA"}
                  </div>
               </div>
             </div>
@@ -836,7 +925,7 @@
               <h2 className="text-3xl font-bold text-gray-800 mb-4">Lista de Compras</h2>
               {items.map(item => (
                   <div key={item.id} className="flex gap-2 items-center">
-                      <input className="w-full p-3 bg-gray-100 rounded" placeholder="Producto" value={item.description} onChange={e=>handleItemChange(item.id, "description", e.target.value)}/>
+                      <input className="w-full p-3 bg-gray-100 rounded" placeholder="Producto (Ej: Cola, Sanduche)" value={item.description} onChange={e=>handleItemChange(item.id, "description", e.target.value)}/>
                       <input type="number" className="w-20 p-3 bg-gray-100 rounded text-center" placeholder="#" value={item.quantity} onChange={e=>handleItemChange(item.id, "quantity", e.target.value)}/>
                       <input type="number" className="w-24 p-3 bg-gray-100 rounded text-center" placeholder="$ Est." value={item.cost} onChange={e=>handleItemChange(item.id, "cost", e.target.value)}/>
                       <button onClick={()=>handleDeleteItem(item.id)} className="p-2 text-red-500"><Trash/></button>
@@ -844,29 +933,25 @@
               ))}
               <button onClick={handleAddItem} className="flex items-center gap-2 px-4 py-2 border-2 border-dashed rounded text-gray-600 hover:bg-gray-50"><Plus className="w-4 h-4"/> Añadir Producto</button>
               
-              <div className="text-right text-lg font-bold mt-2">
-                  Total Estimado: ${totalEstimadoProductos.toFixed(2)}
+              {/* --- TOTALES EN VIVO --- */}
+              <div className="border-t border-gray-100 mt-4 pt-4 flex justify-end">
+                  <div className="text-right">
+                      <p className="text-sm text-gray-500">Productos: ${totalProductos.toFixed(2)}</p>
+                      <p className="text-sm text-gray-500">Envío ({distanciaKm.toFixed(1)}km): ${costoEnvio.toFixed(2)}</p>
+                      <p className="text-2xl font-bold text-black mt-1">Total: ${totalFinal.toFixed(2)}</p>
+                  </div>
               </div>
             </div>
 
             <div className="mt-8 flex justify-end">
-              <button onClick={() => setIsModalOpen(true)} disabled={!isInfoValid || !areItemsValid} className={`px-8 py-3 rounded-lg font-medium text-white ${isInfoValid && areItemsValid ? "bg-black hover:bg-gray-800" : "bg-gray-300 cursor-not-allowed"}`}>Confirmar y Pagar</button>
+                <button onClick={() => setIsModalOpen(true)} disabled={!isInfoValid || !areItemsValid} className={`px-8 py-3 rounded-lg font-medium text-white ${isInfoValid && areItemsValid ? "bg-black hover:bg-gray-800" : "bg-gray-300 cursor-not-allowed"}`}>Confirmar y Pagar</button>
             </div>
           </div>
-          
-          {isModalOpen && <ConfirmacionModal 
-            onClose={() => setIsModalOpen(false)} 
-            servicio="Comprar/Llevar" 
-            desde={storeName} 
-            hasta={deliveryPoint} 
-            hora="N/A" 
-            costoBase={totalEstimadoProductos} 
-            onConfirmAction={handleSubmitBuy}
-          />}
+          {isModalOpen && <ConfirmacionModal onClose={() => setIsModalOpen(false)} servicio="Comprar/Llevar" desde={storeName} hasta={deliveryPoint} hora="N/A" costoBase={totalFinal} onConfirmAction={handleSubmitBuy} />}
         </div>
       );
     }
-
+    
     function NewFavorView({ onGoBack, onNavigateToSendReceive, onNavigateToFastPrints, onNavigateToBuyTake }) {
       return (
         <div className="min-h-screen bg-gray-50 p-4 sm:p-8 animate-in fade-in duration-300">
@@ -1031,13 +1116,14 @@
         );
     }
 
+ // --- NUEVO DASHBOARD DE REPARTIDOR ---
     function DriverDashboardView({ onGoBack, onNavigateToActiveOrder, currentUser }) {
-      const [isOnline, setIsOnline] = useState(false); // Estado: ¿Está trabajando?
+      const [isOnline, setIsOnline] = useState(false); // Estado: ¿Está conectado?
       const [orders, setOrders] = useState([]);
       const [myStats, setMyStats] = useState({ ganancia: 0, completados: 0 });
       const [loading, setLoading] = useState(false);
 
-      // Simulación de carga de pedidos y cálculo de ganancias
+      // Cargar datos al iniciar
       useEffect(() => {
           fetchData();
       }, [currentUser]);
@@ -1047,42 +1133,38 @@
           try {
               const allOrders = await apiCall("/pedido/listar/");
               
-              // 1. Filtrar pedidos disponibles (Publicados) para la lista
+              // 1. Filtrar pedidos disponibles (Solo los "Publicado")
               const disponibles = allOrders.filter(o => o.estado === "Publicado");
               setOrders(disponibles);
 
-              // 2. Calcular ganancias del día (Solo pedidos 'Entregados' por este usuario)
-              // Nota: Como no tenemos endpoint de ganancias, lo calculamos aquí filtrando
+              // 2. Calcular ganancias (Sumar pedidos "Entregados" por este usuario)
               if (currentUser) {
                   const misEntregas = allOrders.filter(o => 
-                      o.estado === "Entregado" && o.idRepartidor === currentUser.id
+                      o.estado === "Entregado" && o.idCliente === currentUser.id // NOTA: Aquí idealmente sería idRepartidor
                   );
                   
                   const totalDinero = misEntregas.reduce((sum, order) => sum + parseFloat(order.costoEnvio || 0), 0);
+                  
                   setMyStats({
                       ganancia: totalDinero.toFixed(2),
                       completados: misEntregas.length
                   });
               }
-
-          } catch (error) {
-              console.error(error);
-          } finally {
-              setLoading(false);
-          }
+          } catch (error) { console.error(error); } finally { setLoading(false); }
       };
 
       const handleToggleOnline = () => {
-          setIsOnline(!isOnline);
-          if (!isOnline) fetchData(); // Refrescar datos al conectarse
+          const newState = !isOnline;
+          setIsOnline(newState);
+          if (newState) fetchData(); // Recargar pedidos al conectarse
       };
 
       const handleAccept = async (orderId) => {
-          if (!isOnline) return alert("Debes conectarte para aceptar pedidos.");
+          if (!isOnline) return alert("⚠️ Debes conectarte para trabajar.");
           
           try {
               await apiCall(`/pedido/aceptar/${orderId}/`, "PATCH");
-              alert("¡Pedido aceptado! A trabajar.");
+              alert("¡Pedido aceptado! Redirigiendo al mapa...");
               onNavigateToActiveOrder(orderId);
           } catch (error) {
               alert("Error: " + error.message);
@@ -1092,100 +1174,69 @@
 
       return (
         <div className="min-h-screen bg-gray-50 pb-20 animate-in fade-in">
-          {/* --- HEADER DEL DASHBOARD --- */}
-          <header className="bg-white shadow-sm sticky top-0 z-30">
-            <div className="max-w-3xl mx-auto px-4 py-4 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                    <button onClick={onGoBack} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
-                        <ArrowLeft />
+          {/* HEADER DEL DASHBOARD */}
+          <header className="bg-white shadow-sm sticky top-0 z-30 border-b border-gray-100">
+            <div className="max-w-3xl mx-auto px-4 py-4">
+                <div className="flex items-center justify-between mb-4">
+                    <button onClick={onGoBack} className="p-2 hover:bg-gray-100 rounded-full transition-colors"><ArrowLeft /></button>
+                    
+                    {/* BOTÓN INTERRUPTOR ON/OFF */}
+                    <button 
+                        onClick={handleToggleOnline}
+                        className={`flex items-center gap-2 px-6 py-2 rounded-full font-bold transition-all shadow-sm ${isOnline ? 'bg-green-500 text-white' : 'bg-gray-200 text-gray-500'}`}
+                    >
+                        {isOnline ? "🟢 EN LÍNEA" : "🔴 DESCONECTADO"}
                     </button>
-                    <div>
-                        <h1 className="text-xl font-bold text-gray-900 leading-tight">Hola, {currentUser?.nombre || "Repartidor"}</h1>
-                        <p className="text-xs text-gray-500">{isOnline ? "🟢 En línea y buscando..." : "🔴 Desconectado"}</p>
-                    </div>
                 </div>
-                
-                {/* BOTÓN DE CONEXIÓN */}
-                <button 
-                    onClick={handleToggleOnline}
-                    className={`relative inline-flex h-8 w-14 items-center rounded-full transition-colors duration-300 focus:outline-none ${isOnline ? 'bg-green-500' : 'bg-gray-300'}`}
-                >
-                    <span className={`inline-block h-6 w-6 transform rounded-full bg-white shadow transition-transform duration-300 ${isOnline ? 'translate-x-7' : 'translate-x-1'}`} />
-                </button>
-            </div>
-            
-            {/* --- ESTADÍSTICAS RÁPIDAS --- */}
-            <div className="border-t border-gray-100">
-                <div className="max-w-3xl mx-auto grid grid-cols-2 divide-x divide-gray-100">
-                    <div className="p-4 text-center">
-                        <p className="text-xs text-gray-500 uppercase font-bold tracking-wider">Ganancia Hoy</p>
-                        <p className="text-2xl font-black text-gray-900">${myStats.ganancia}</p>
+
+                {/* RESUMEN DE GANANCIAS */}
+                <div className="grid grid-cols-2 divide-x divide-gray-100 mt-2">
+                    <div className="text-center px-4">
+                        <p className="text-xs text-gray-400 uppercase font-bold tracking-wider mb-1">Ganancia Hoy</p>
+                        <p className="text-3xl font-black text-gray-900 tracking-tight">${myStats.ganancia}</p>
                     </div>
-                    <div className="p-4 text-center">
-                        <p className="text-xs text-gray-500 uppercase font-bold tracking-wider">Completados</p>
-                        <p className="text-2xl font-black text-gray-900">{myStats.completados}</p>
+                    <div className="text-center px-4">
+                        <p className="text-xs text-gray-400 uppercase font-bold tracking-wider mb-1">Entregas</p>
+                        <p className="text-3xl font-black text-gray-900 tracking-tight">{myStats.completados}</p>
                     </div>
                 </div>
             </div>
           </header>
 
           <main className="max-w-3xl mx-auto px-4 py-6">
-            <h2 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
-                <div className="w-2 h-6 bg-black rounded-full"></div>
-                Pedidos Disponibles
+            <h2 className="text-lg font-bold text-gray-800 mb-4">
+                {isOnline ? `Pedidos Disponibles (${orders.length})` : "Estación de trabajo"}
             </h2>
 
-            {/* --- LISTA DE PEDIDOS --- */}
-            <div className="relative min-h-[300px]">
+            {/* ÁREA DE LISTA (Con efecto Blur si está Offline) */}
+            <div className="relative min-h-[400px]">
                 
-                {/* CAPA DE BLOQUEO SI ESTÁ OFFLINE */}
+                {/* BLOQUEO OFFLINE */}
                 {!isOnline && (
-                    <div className="absolute inset-0 z-10 bg-white/60 backdrop-blur-sm flex flex-col items-center justify-center text-center p-6 rounded-xl border-2 border-dashed border-gray-300">
-                        <div className="bg-white p-4 rounded-full shadow-lg mb-4">
-                            <span className="text-4xl">😴</span>
-                        </div>
-                        <h3 className="text-xl font-bold text-gray-800">Estás desconectado</h3>
-                        <p className="text-gray-500 mb-6 max-w-xs">Conéctate para ver los pedidos disponibles y empezar a ganar dinero.</p>
-                        <button onClick={handleToggleOnline} className="bg-black text-white px-8 py-3 rounded-full font-bold hover:bg-gray-800 transition-all transform hover:scale-105 shadow-xl">
-                            Conectarse ahora
-                        </button>
+                    <div className="absolute inset-0 z-10 bg-white/80 backdrop-blur-sm flex flex-col items-center justify-center text-center p-6 rounded-2xl border-2 border-dashed border-gray-200">
+                        <div className="bg-gray-100 p-6 rounded-full mb-4"><span className="text-4xl">😴</span></div>
+                        <h3 className="text-2xl font-bold text-gray-800 mb-2">Estás desconectado</h3>
+                        <p className="text-gray-500 mb-8 max-w-xs mx-auto">Conéctate para ver los pedidos disponibles y ganar dinero.</p>
+                        <button onClick={handleToggleOnline} className="bg-black text-white px-10 py-4 rounded-full font-bold text-lg hover:bg-gray-800 transition-transform transform hover:scale-105 shadow-xl">CONECTARSE</button>
                     </div>
                 )}
 
-                {/* CONTENIDO DE LA LISTA */}
-                <div className={`space-y-4 transition-all duration-500 ${!isOnline ? 'filter blur-sm opacity-50' : ''}`}>
-                    {loading ? (
-                        <p className="text-center py-10 text-gray-400">Buscando pedidos cercanos...</p>
-                    ) : orders.length === 0 ? (
-                        <div className="text-center py-12 bg-white rounded-xl border border-gray-100 shadow-sm">
-                            <p className="text-gray-400 mb-2">No hay pedidos por ahora.</p>
-                            <p className="text-sm text-gray-300">Relájate un poco ☕</p>
+                {/* LISTA DE PEDIDOS */}
+                <div className={`space-y-4 transition-all duration-500 ${!isOnline ? 'opacity-20 pointer-events-none' : 'opacity-100'}`}>
+                    {orders.length === 0 ? (
+                        <div className="text-center py-16 bg-white rounded-xl border border-gray-100 shadow-sm">
+                            <p className="text-gray-400">No hay pedidos pendientes.</p>
                         </div>
                     ) : (
                         orders.map(order => (
-                            <div key={order.codigoPedido} className="bg-white p-5 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow relative overflow-hidden group">
-                                <div className="absolute top-0 left-0 w-1 h-full bg-black group-hover:bg-blue-600 transition-colors"></div>
-                                <div className="flex justify-between items-start mb-3 pl-3">
-                                    <div>
-                                        <span className="bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded-md font-bold uppercase">Favor</span>
-                                        <h3 className="font-bold text-lg text-gray-900 mt-1">Pedido #{order.codigoPedido}</h3>
-                                    </div>
-                                    <div className="text-right">
-                                        <span className="block text-2xl font-black text-green-600">${order.costoEnvio}</span>
-                                        <span className="text-xs text-gray-400">Ganancia est.</span>
-                                    </div>
+                            <div key={order.codigoPedido} className="bg-white p-5 rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
+                                <div className="flex justify-between items-start mb-2">
+                                    <span className="bg-blue-50 text-blue-700 text-xs px-2 py-1 rounded-md font-bold uppercase">Nuevo</span>
+                                    <span className="block text-2xl font-black text-gray-900">${order.costoEnvio}</span>
                                 </div>
-                                <p className="text-gray-600 mb-4 pl-3 text-sm line-clamp-2">{order.descripcion}</p>
-                                <div className="pl-3">
-                                    <button 
-                                        onClick={() => handleAccept(order.codigoPedido)} 
-                                        disabled={!isOnline}
-                                        className="w-full bg-black text-white py-3 rounded-lg font-bold hover:bg-gray-800 active:scale-95 transition-all flex justify-center items-center gap-2 disabled:cursor-not-allowed"
-                                    >
-                                        <span>Aceptar Pedido</span>
-                                        <ArrowLeft className="w-4 h-4 rotate-180" />
-                                    </button>
-                                </div>
+                                <h3 className="font-bold text-lg text-gray-800 mb-1">{order.descripcion}</h3>
+                                <p className="text-xs text-gray-500 mb-4">📍 Recoger en: {order.punto_origen_id}</p>
+                                <button onClick={() => handleAccept(order.codigoPedido)} className="w-full bg-black text-white py-3 rounded-lg font-bold hover:bg-gray-800">ACEPTAR PEDIDO</button>
                             </div>
                         ))
                     )}
@@ -1195,7 +1246,6 @@
         </div>
       );
     }
-
 
     function MyOrdersView({ onGoBack, onNavigateToActiveOrder, currentUserId }) {
       const [orders, setOrders] = useState([]);
@@ -1333,7 +1383,13 @@
       if (currentView === "carnetPhotoUpload") { return <CarnetPhotoUploadView onGoBack={() => setCurrentView("driverWelcome")} />; }
       if (currentView === "help") { return renderHelpView(); }
       if (currentView === "activeOrder") { return <ActiveOrderView orderId={activeOrderId} userRole={currentUser?.rol} onGoBack={() => { setIgnoredOrderId(activeOrderId); setCurrentView("home"); }} />; }
-      if (currentView === "driverFeed") { return <DriverFeedView onGoBack={() => setCurrentView("home")} onNavigateToActiveOrder={(id) => { setActiveOrderId(id); setCurrentView("activeOrder"); }} />; }
+      if (currentView === "driverFeed") { 
+          return <DriverDashboardView 
+                    onGoBack={() => setCurrentView("home")} 
+                    currentUser={currentUser} // <-- ¡IMPORTANTE! Pasamos el usuario para ver sus ganancias
+                    onNavigateToActiveOrder={(id) => { setActiveOrderId(id); setCurrentView("activeOrder"); }} 
+                />; 
+      }
       if (currentView === "myOrders") { return <MyOrdersView onGoBack={() => setCurrentView("home")} currentUserId={currentUser?.id} onNavigateToActiveOrder={(id) => { setActiveOrderId(id); setCurrentView("activeOrder"); }} />; }
 
       return (
