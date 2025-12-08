@@ -201,7 +201,7 @@
         }
     };
     // --- CONFIGURACIÓN CENTRAL (NUEVA) ---
-    const API_BASE_URL = "http://127.0.0.1:8000/api";
+    const API_BASE_URL = "http://192.168.3.114:8000/api";
 
     // --- 1. FUNCIONES DE AYUDA Y MATEMÁTICAS ---
     
@@ -823,6 +823,11 @@
       // ESTADOS NUEVOS PARA PRECIO
       const [precioEstimado, setPrecioEstimado] = useState(0);
       const [distanciaKm, setDistanciaKm] = useState(0);
+      const isFormValid = fecha && recogida && entrega && hora && descripcion && whatsapp;
+      const handleMapSelection = (coordTexto) => {
+          if (activeField === "recogida") setRecogida(coordTexto);
+          else setEntrega(coordTexto);
+      };
 
 // A. NUEVO CÁLCULO DE PRECIO (Conecta con Backend)
       useEffect(() => {
@@ -1786,6 +1791,20 @@ function FastPrintsView({ onGoBack, onNavigateToSendReceive, onNavigateToBuyTake
       const [selectedOrder, setSelectedOrder] = useState(null);
 
       // 2. useEffect: Si el usuario se conecta, cargamos datos; si se desconecta, limpiamos la lista.
+      useEffect(() => {
+          if (!isOnline) return;
+          
+          const checkNewOrders = async () => {
+              const nuevos = await apiCall("/pedido/publicados/");
+              if (nuevos.length > orders.length && nuevos[0]) {
+                  setIncomingOrder(nuevos[0]); // Auto-mostrar popup
+              }
+              setOrders(nuevos);
+          };
+          
+          const interval = setInterval(checkNewOrders, 5000); // Cada 5 seg
+          return () => clearInterval(interval);
+      }, [isOnline, orders.length]);
       useEffect(() => {
           if (isOnline) {
               fetchData();
