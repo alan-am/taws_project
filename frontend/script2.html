@@ -201,21 +201,51 @@
         }
     };
     // --- CONFIGURACIÓN CENTRAL (NUEVA) ---
-    const API_BASE_URL = "http://192.168.3.114:8000/api";
+    const API_BASE_URL = "http://192.168.3.114:8000/api"; 
 
     // --- 1. FUNCIONES DE AYUDA Y MATEMÁTICAS ---
     
     const apiCall = async (endpoint, method = "GET", body = null) => {
       const token = localStorage.getItem("accessToken");
-      const headers = { "Content-Type": "application/json", ...(token && { "Authorization": `Bearer ${token}` }) };
+      const headers = { 
+        "Content-Type": "application/json", 
+        ...(token && { "Authorization": `Bearer ${token}` }) 
+      };
+      
       try {
-        const response = await fetch(`${API_BASE_URL}${endpoint}`, { method, headers, ...(body && { body: JSON.stringify(body) }) });
-        if (response.status === 401) { console.warn("Sesión expirada"); localStorage.removeItem("accessToken"); }
+        const response = await fetch(`${API_BASE_URL}${endpoint}`, { 
+          method, 
+          headers, 
+          ...(body && { body: JSON.stringify(body) }) 
+        });
+        
+        if (response.status === 401) { 
+          console.warn("Sesión expirada"); 
+          localStorage.removeItem("accessToken"); 
+          throw new Error("Sesión expirada");
+        }
+        
         if (response.status === 204) return true;
+        
+        // ✅ NUEVO: Verifica si la respuesta es JSON
+        const contentType = response.headers.get("content-type");
+        if (!contentType || !contentType.includes("application/json")) {
+          const text = await response.text();
+          console.error("Respuesta no es JSON:", text.substring(0, 200));
+          throw new Error("El servidor devolvió HTML en lugar de JSON. Revisa la consola de Django.");
+        }
+        
         const data = await response.json();
-        if (!response.ok) throw new Error(data.detail || JSON.stringify(data));
+        
+        if (!response.ok) {
+          throw new Error(data.detail || JSON.stringify(data));
+        }
+        
         return data;
-      } catch (error) { console.error("API Error:", error); throw error; }
+      } catch (error) { 
+        console.error("API Error:", error); 
+        throw error; 
+      }
     };
 
     //----funcion api para la subida de imagenes con el back
@@ -740,9 +770,9 @@
         const map = L.map(containerId).setView(ESPOL_COORDS, 16);
         mapRef.current = map;
 
-        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { 
-            attribution: "© OpenStreetMap", 
-            maxZoom: 19 
+        L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
+            maxZoom: 20,
+            attribution: '© Google Maps'
         }).addTo(map);
         
         map.on("click", function(e) {
@@ -870,7 +900,7 @@
                   punto_origen: recogida,  // OJO: Usamos los campos de texto nuevos
                   punto_destino: entrega, 
                   horaDeseada: new Date().toISOString(), // O la hora real del input
-                  costoEnvio: precioEstimado,
+                  costoEnvio: parseFloat(precioEstimado.toFixed(2)),
                   estado: "Publicado" 
               });
               
@@ -1016,14 +1046,13 @@ function FastPrintsView({ onGoBack, onNavigateToSendReceive, onNavigateToBuyTake
               const descripcion = `IMPRESIÓN: ${fileName} (${copies} copias, ${color}) \nRECOGER: ${recogida} \nENTREGAR: ${entrega}`;
               
               await apiCall("/pedido/crear/", "POST", { 
-                  num_whats: "0999999999", 
-                  descripcion, 
-                  punto_origen_id: 1, 
-                  punto_desitno_id: 1, 
-                  horaDeseada: new Date().toISOString(), 
-                  fechaInicial: new Date().toISOString(), 
-                  costoEnvio: totalPagar.toFixed(2), 
-                  estado: "Publicado" 
+                num_whats: "0999999999",  // Podrías agregar un campo para esto
+                descripcion, 
+                punto_origen: recogida,    // ✅ CORREGIDO
+                punto_destino: entrega,    // ✅ CORREGIDO
+                horaDeseada: new Date().toISOString(), 
+                costoEnvio: totalPagar.toFixed(2), 
+                estado: "Publicado"
               });
               alert("✅ Orden de impresión enviada."); onGoBack();
           } catch (error) { alert("Error: " + error.message); }
@@ -1181,11 +1210,10 @@ function FastPrintsView({ onGoBack, onNavigateToSendReceive, onNavigateToBuyTake
               await apiCall("/pedido/crear/", "POST", { 
                   num_whats: whatsapp, 
                   descripcion, 
-                  punto_origen_id: 1, 
-                  punto_desitno_id: 1, 
-                  horaDeseada: new Date().toISOString(), 
-                  fechaInicial: new Date().toISOString(), 
-                  costoEnvio: totalFinal.toFixed(2), // Precio total calculado
+                  punto_origen: storeAddress,   // ✅ Dirección de la tienda
+                  punto_destino: deliveryPoint, // ✅ Punto de entrega
+                  horaDeseada: new Date().toISOString(),
+                  costoEnvio: totalFinal.toFixed(2),
                   estado: "Publicado" 
               });
               alert("✅ Pedido de compra creado."); onGoBack();
@@ -1806,48 +1834,53 @@ function FastPrintsView({ onGoBack, onNavigateToSendReceive, onNavigateToBuyTake
           return () => clearInterval(interval);
       }, [isOnline, orders.length]);
       useEffect(() => {
+          // Definimos la función de carga AQUÍ dentro para que se ejecute siempre al entrar
+          const fetchData = async () => {
+              // Validación de seguridad
+              if (currentUser?.estado_verificacion !== 'Aprobado') {
+                  setOrders([]);
+                  setMyStats({ ganancia: "0.00", completados: 0 });
+                  return;
+              }
+              
+              setLoading(true);
+              try {
+                  // 1. Cargar pedidos disponibles (Muro)
+                  const disponibles = await apiCall("/pedido/publicados/");
+                  setOrders(disponibles);
+
+                  // 2. Cargar mis ganancias (ESTADÍSTICAS)
+                  if (currentUser) {
+                      try {
+                          const stats = await apiCall("/pedido/ganancias/");
+                          // Actualizamos el estado con los datos frescos del backend
+                          setMyStats({
+                              ganancia: stats.ganancias_acumuladas.toFixed(2),
+                              completados: stats.pedidos_completados || 0 
+                          });
+                      } catch(e) {
+                          console.warn("No se pudieron cargar ganancias:", e);
+                          setMyStats({ ganancia: "0.00", completados: 0 });
+                      }
+                  }
+              } catch (error) { 
+                  console.error(error); 
+              } finally { 
+                  setLoading(false); 
+              }
+          };
+
+          // Solo ejecutamos si el repartidor está "En Línea"
           if (isOnline) {
               fetchData();
           } else {
               setOrders([]);
           }
-      }, [currentUser]); // Se ejecuta cada vez que cambia el usuario (y su disponibilidad)
-
-      const fetchData = async () => {
-          // ✅ NUEVO: Verificar estado de aprobación
-          if (currentUser?.estado_verificacion !== 'Aprobado') {
-              setOrders([]);
-              setMyStats({ ganancia: "0.00", completados: 0 });
-              alert("⚠️ Tu cuenta está pendiente de aprobación por un administrador.");
-              return;
-          }
           
-          setLoading(true);
-          try {
-              const disponibles = await apiCall("/pedido/publicados/");
-              setOrders(disponibles);
-
-              if (currentUser) {
-                  try {
-                      const stats = await apiCall("/pedido/ganancias/");
-                      setMyStats({
-                          ganancia: stats.ganancias_acumuladas.toFixed(2),
-                          completados: stats.pedidos_completados || 0  // ✅ CORREGIDO
-                      });
-                  } catch(e) {
-                      console.warn("No se pudieron cargar ganancias:", e);
-                      setMyStats({ ganancia: "0.00", completados: 0 });
-                  }
-              }
-          } catch (error) { 
-              console.error(error); 
-          } finally { 
-              setLoading(false); 
-          }
-      };
-
-      // NOTA: Eliminamos 'handleToggleOnline' local porque estaba rota. 
-      // Ahora usamos 'onToggleOnline' (la prop) directamente en los botones.
+          // ALERTA: La dependencia clave es [isOnline]. 
+          // Al volver de la pantalla de "Pedido Entregado", este componente se monta de nuevo
+          // y React ejecutará este efecto automáticamente.
+      }, [isOnline, currentUser]);
 
       const handleRequestAccept = (order) => { 
           setSelectedOrder(order); 
@@ -2183,7 +2216,10 @@ function FastPrintsView({ onGoBack, onNavigateToSendReceive, onNavigateToBuyTake
             if (currentView === "activeOrder") return;
             try {
                 const data = await apiCall("/pedido/listar/");
-                const pedidoAceptado = data.find(p => (p.estado === "Aceptado" || p.estado === "Entregado") && currentUser && p.idCliente === currentUser.id);
+                const pedidoAceptado = data.find(p => 
+                    p.estado === 'Aceptado' && 
+                    currentUser && p.idCliente === currentUser.id
+                );
                 if (pedidoAceptado && pedidoAceptado.codigoPedido !== ignoredOrderId) { console.log("¡Pedido detectado!", pedidoAceptado); setActiveOrderId(pedidoAceptado.codigoPedido); setCurrentView("activeOrder"); }
             } catch (error) { if (error.message !== "Sesión expirada") console.error(error); }
         };

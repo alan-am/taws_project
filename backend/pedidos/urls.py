@@ -69,7 +69,7 @@ urlpatterns = [
     ),
     path(
             'api/pedido/ganancias/', 
-            GananciasRepartidorView.as_view(), 
+            PedidoViewSet.as_view({'get': 'ganancias'}), 
             name='ganancias-repartidor'
         ),
 ]

@@ -37,9 +37,19 @@ class PedidoSerializer(serializers.ModelSerializer):
         #}
 
     def create(self, validated_data):
+        """
+        ✅ SOLUCIÓN: Asigna automáticamente el usuario logueado como cliente
+        """
+        # Obtener el usuario de la request (viene del contexto)
+        request = self.context.get('request')
         
-        #Crea y retorna un nuevo pedido.
+        if not request or not request.user.is_authenticated:
+            raise serializers.ValidationError("Debes estar logueado para crear un pedido.")
         
+        # Asignar el usuario logueado como cliente
+        validated_data['idCliente'] = request.user
+        
+        # Crear el pedido
         pedido = Pedidos.objects.create(**validated_data)
         return pedido
 
