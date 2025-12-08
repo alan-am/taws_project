@@ -72,4 +72,18 @@ urlpatterns = [
             PedidoViewSet.as_view({'get': 'ganancias'}), 
             name='ganancias-repartidor'
         ),
+
+    path(
+        'api/pedido/precio_dinamico/',
+        PedidoViewSet.as_view({'get': 'precio_dinamico'}),
+        name='pedido-precio-dinamico'
+    ),
+    
+    # También falta esta para ganancias:
+    path(
+        'api/pedido/ganancias/',
+        PedidoViewSet.as_view({'get': 'ganancias'}),
+        name='pedido-ganancias'
+    ),
+
 ]

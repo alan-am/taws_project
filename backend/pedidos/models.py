@@ -33,7 +33,7 @@ class Pedidos(models.Model):
     fechaFinal= models.DateTimeField(null= True, blank= True) #fecha de cierre del pedido
 
     #Costos
-    costoEnvio = models.DecimalField(max_digits=2, decimal_places=2)
+    costoEnvio = models.DecimalField(max_digits=10, decimal_places=2)
 
     #Atributos por si es impresion(son opcionales)
     archivo_pdf = models.URLField(max_length=500, null=True, blank=True)

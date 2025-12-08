@@ -774,7 +774,13 @@
             maxZoom: 20,
             attribution: '© Google Maps'
         }).addTo(map);
-        
+        // 👈 LÍNEA AÑADIDA: Forzar la redimensión del mapa
+        setTimeout(() => {
+            if (mapRef.current) {
+                mapRef.current.invalidateSize(); 
+            }
+        }, 300); // 300ms de retraso para asegurar que el contenedor esté visible
+
         map.on("click", function(e) {
             const { lat, lng } = e.latlng;
             if (onSelectRef.current) {
@@ -865,18 +871,25 @@
               const coord1 = parseCoordinates(recogida);
               const coord2 = parseCoordinates(entrega);
               
-              let dist = 1.0; 
+              // ✅ NUEVA LÓGICA: Solo calcular si AMBOS puntos existen
+              let dist = 0;
               if (coord1 && coord2) {
                   dist = getDistanceFromLatLonInKm(coord1.lat, coord1.lng, coord2.lat, coord2.lng);
               }
               setDistanciaKm(dist);
+
+              // Si no hay distancia válida, mostrar precio base
+              if (dist === 0) {
+                  setPrecioEstimado(0.50); // Solo tarifa base
+                  return;
+              }
 
               try {
                   const data = await apiCall(`/pedido/precio_dinamico/?distancia=${dist}&tipo=normal`);
                   setPrecioEstimado(data.precio);
               } catch (e) {
                   console.error("Error calculando precio:", e);
-                  // ✅ FALLBACK: Calcular localmente si el backend falla
+                  // Fallback local
                   const TARIFA_BASE = 0.50;
                   const COSTO_POR_KM = 0.40;
                   const precioLocal = TARIFA_BASE + (dist * COSTO_POR_KM);
@@ -888,7 +901,6 @@
           return () => clearTimeout(timer);
 
       }, [recogida, entrega]);
-
       // B. NUEVO ENVÍO DE PEDIDO (Sin simulaciones falsas)
       const handleSubmit = async () => {
            try {
@@ -945,11 +957,15 @@
                     <div>
                         <p className="text-xs text-gray-500 font-bold uppercase">Costo Estimado</p>
                         <p className="text-xs text-gray-400 mt-1">
-                           {distanciaKm > 0 ? `Distancia: ${distanciaKm.toFixed(2)} km` : "Define origen y destino"}
+                          {distanciaKm > 0 
+                              ? `Distancia: ${distanciaKm.toFixed(2)} km` 
+                              : "📍 Marca ambos puntos en el mapa"}
                         </p>
                     </div>
                     <div className="text-right">
-                        <span className="text-3xl font-black text-black">${precioEstimado.toFixed(2)}</span>
+                        <span className="text-3xl font-black text-black">
+                            ${precioEstimado.toFixed(2)}
+                        </span>
                     </div>
                 </div>
 
@@ -1000,23 +1016,25 @@ function FastPrintsView({ onGoBack, onNavigateToSendReceive, onNavigateToBuyTake
               // 1. Calcular Distancia
               const coord1 = parseCoordinates(recogida);
               const coord2 = parseCoordinates(entrega);
+              
+              // ✅ CORREGIDO
               let dist = 0;
               if (coord1 && coord2) {
                   dist = getDistanceFromLatLonInKm(coord1.lat, coord1.lng, coord2.lat, coord2.lng);
-              } else if (recogida && entrega) {
-                  dist = 1.0;
               }
               setDistanciaKm(dist);
 
-              // 2. Calcular Precio de Envío (usar backend)
-              let precioEnvio = 0;
-              try {
-                  const data = await apiCall(`/pedido/precio_dinamico/?distancia=${dist}&tipo=normal`);
-                  precioEnvio = data.precio;
-              } catch (e) {
-                  console.error("Error calculando precio envío:", e);
-                  // Fallback local
-                  precioEnvio = 0.50 + (dist * 0.40);
+              // 2. Calcular Precio de Envío
+              let precioEnvio = 0.50; // Base mínima
+              
+              if (dist > 0) {
+                  try {
+                      const data = await apiCall(`/pedido/precio_dinamico/?distancia=${dist}&tipo=normal`);
+                      precioEnvio = data.precio;
+                  } catch (e) {
+                      console.error("Error calculando precio envío:", e);
+                      precioEnvio = 0.50 + (dist * 0.40);
+                  }
               }
               
               // 3. Calcular Precio de Impresión
@@ -1165,23 +1183,25 @@ function FastPrintsView({ onGoBack, onNavigateToSendReceive, onNavigateToBuyTake
               // 1. Calcular Distancia
               const coord1 = parseCoordinates(storeAddress);
               const coord2 = parseCoordinates(deliveryPoint);
+              
+              // ✅ CORREGIDO
               let dist = 0;
               if (coord1 && coord2) {
                   dist = getDistanceFromLatLonInKm(coord1.lat, coord1.lng, coord2.lat, coord2.lng);
-              } else if (storeAddress && deliveryPoint) {
-                  dist = 1.0; 
               }
               setDistanciaKm(dist);
 
-              // 2. Calcular Envío (usar backend con tipo "pesado")
-              let tarifaEnvio = 0;
-              try {
-                  const data = await apiCall(`/pedido/precio_dinamico/?distancia=${dist}&tipo=pesado`);
-                  tarifaEnvio = data.precio;
-              } catch (e) {
-                  console.error("Error calculando precio envío:", e);
-                  // Fallback: Base más alta para compras
-                  tarifaEnvio = 0.75 + (dist * 0.30);
+              // 2. Calcular Envío (tipo "pesado" para compras)
+              let tarifaEnvio = 0.75; // Base más alta para compras
+              
+              if (dist > 0) {
+                  try {
+                      const data = await apiCall(`/pedido/precio_dinamico/?distancia=${dist}&tipo=pesado`);
+                      tarifaEnvio = data.precio;
+                  } catch (e) {
+                      console.error("Error calculando precio envío:", e);
+                      tarifaEnvio = 0.75 + (dist * 0.30);
+                  }
               }
               
               setCostoEnvio(tarifaEnvio);
@@ -1655,6 +1675,8 @@ function FastPrintsView({ onGoBack, onNavigateToSendReceive, onNavigateToBuyTake
         
         const isDriver = userRole === "repartidor";
         const isFinished = order.estado === 'Entregado';
+        const routeStartCoords = parseCoordinates(order.punto_origen);
+        const routeEndCoords = parseCoordinates(order.punto_destino);
 
         // 3. DISEÑO "SPLIT VIEW" (Replicado de tu imagen image_9b70bf.png)
         return (
@@ -1793,7 +1815,12 @@ function FastPrintsView({ onGoBack, onNavigateToSendReceive, onNavigateToBuyTake
 
                 {/* --- COLUMNA DERECHA: MAPA (65% ancho) --- */}
                 <div className="flex-1 bg-gray-100 relative min-h-[400px] lg:min-h-screen">
-                    <MapComponent mapId="active-map" />
+                    <MapComponent 
+                        mapId="active-map" 
+                        // 👇 MODIFICA ESTAS DOS LÍNEAS 👇
+                        routeStart={routeStartCoords} 
+                        routeEnd={routeEndCoords}     
+                    />
                     
                     {/* Tarjeta Flotante de Precio (Estilo Main) */}
                     <div className="hidden lg:block absolute bottom-8 right-8 bg-white px-6 py-4 rounded-2xl shadow-2xl z-[400] border border-gray-100 transform hover:scale-105 transition-transform">

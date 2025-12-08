@@ -50,4 +50,9 @@ urlpatterns = [
         UsuarioViewSet.as_view({'delete': 'destroy'}), 
         name='usuario-eliminar'
     ),
+    path(
+        'api/usuario/subir-imagen/', 
+        UsuarioViewSet.as_view({'post': 'subir_imagen'}), 
+        name='usuario-subir-imagen'
+    ),
 ]

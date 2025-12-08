@@ -6,8 +6,8 @@ from usuario.models import Usuario  # Para mostrar info del cliente y repartidor
 
 class PedidoSerializer(serializers.ModelSerializer):
     # Traducción y lectura de campos relacionados
-    cliente_nombre = serializers.CharField(source='idCliente.username', read_only=True)
-    repartidor_nombre = serializers.CharField(source='idRepartidor.username', read_only=True)
+    cliente_nombre = serializers.CharField(source='idCliente.first_name', read_only=True)
+    repartidor_nombre = serializers.CharField(source='idRepartidor.first_name', read_only=True)
 
     class Meta:
         model = Pedidos
@@ -38,20 +38,19 @@ class PedidoSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         """
-        ✅ SOLUCIÓN: Asigna automáticamente el usuario logueado como cliente
+        Crea y retorna un nuevo pedido, asignando el cliente del request.
         """
-        # Obtener el usuario de la request (viene del contexto)
+        # Obtener el usuario autenticado del contexto
         request = self.context.get('request')
         
-        if not request or not request.user.is_authenticated:
-            raise serializers.ValidationError("Debes estar logueado para crear un pedido.")
-        
-        # Asignar el usuario logueado como cliente
+        # Asignar el cliente automáticamente desde el usuario autenticado
         validated_data['idCliente'] = request.user
         
-        # Crear el pedido
-        pedido = Pedidos.objects.create(**validated_data)
-        return pedido
+        # Crear y guardar el pedido
+        instance = Pedidos(**validated_data)
+        instance.save()
+        
+        return instance
 
     def update(self, instance, validated_data):
         
